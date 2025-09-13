@@ -1,0 +1,23 @@
+services:
+  postgres:
+    build:
+      context: db
+    container_name: fhirdb
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: fhir
+    ports:
+      - "5432:5432"
+  cache:
+    image: redis:8.2.1-alpine3.22
+    command: redis-server --requirepass mysecretpassword
+    ports:
+      - "6379:6379"
+  app:
+    build:
+      context:
+        server
+    container_name: server
+    ports:
+      - "3000:3000"

@@ -1,113 +1,30 @@
-CREATE TYPE human_name_use AS ENUM ('USUAL', 'OFFICIAL', 'TEMP', 'NICKNAME', 'ANONYMOUS', 'OLD', 'MAIDEN');
-CREATE TYPE contact_point_system AS ENUM ('PHONE', 'FAX', 'EMAIL', 'PAGER', 'URL', 'SMS', 'OTHER');
-CREATE TYPE contact_point_use AS ENUM ('HOME', 'WORK', 'TEMP', 'OLD', 'MOBILE');
-CREATE TYPE gender AS ENUM ('FEMALE', 'MALE', 'OTHER', 'UNKNOWN');
-CREATE TYPE address_use AS ENUM ('HOME', 'WORK', 'TEMP', 'OLD', 'BILLING');
-CREATE TYPE address_type AS ENUM ('POSTAL', 'PHYSICAL', 'BOTH');
-CREATE TYPE link_type AS ENUM ('REPLACED-BY', 'REPLACES', 'REFER', 'SEEALSO');
-CREATE TYPE extension_type AS ENUM (
-    'BASE64BINARY',
-    'BOOLEAN',
-    'CANONICAL',
-    'CODE',
-    'DATE',
-    'DATETIME',
-    'DECIMAL',
-    'ID',
-    'INSTANT',
-    'INTEGER',
-    'MARKDOWN',
-    'OID',
-    'POSITIVE_INT',
-    'STRING',
-    'TIME',
-    'UNSIGNED_INT',
-    'URI',
-    'URL',
-    'UUID',
-    'ADDRESS',
-    'AGE',
-    'ANNOTATION',
-    'ATTACHMENT',
-    'CODEABLE_CONCEPT',
-    'CODEABLE_REFERENCE',
-    'CODING',
-    'CONTACT_POINT',
-    'COUNT',
-    'DISTANCE',
-    'DURATION',
-    'HUMAN_NAME',
-    'IDENTIFIER',
-    'MONEY',
-    'PERIOD',
-    'QUANTITY',
-    'RANGE',
-    'RATIO',
-    'RATIO_RANGE',
-    'REFERENCE',
-    'SAMPLED_DATA',
-    'SIGNATURE',
-    'TIMING',
-    'CONTACT_DETAIL',
-    'CONTRIBUTOR',
-    'DATA_REQUIREMENT',
-    'EXPRESSION',
-    'PARAMETER_DEFINITION',
-    'RELATED_ARTIFACT',
-    'TRIGGER_DEFINITION',
-    'USAGE_CONTEXT',
-    'DOSAGE'
-    );
+
+
+
+
+
 CREATE TYPE author_reference_type AS ENUM ('STRING', 'PRACTITIONER', 'PATIENT', 'RELATED_PERSON', 'ORGANIZATION');
-CREATE TYPE identifier_use AS ENUM ('USUAL', 'OFFICIAL', 'TEMP', 'OLD');
-CREATE TYPE narrative_status AS ENUM ('GENERATED', 'EXTENSIONS', 'ADDITIONAL', 'EMPTY');
+
+
 CREATE TYPE day_of_week AS ENUM ('MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN');
 CREATE TYPE practitioner_status AS ENUM ('ACTIVE', 'SUSPENDED', 'ERROR', 'OFF', 'ENTERED-IN-ERROR', 'TEST');
 CREATE TYPE endpoint_status AS ENUM ('ACTIVE', 'SUSPENDED', 'ERROR', 'OFF', 'ENTERED-IN-ERROR', 'TEST');
 CREATE TYPE location_status AS ENUM ('ACTIVE', 'SUSPENDED', 'INACTIVE');
 CREATE TYPE location_mode AS ENUM ('INSTANCE', 'KIND');
 
-CREATE DOMAIN uri AS TEXT;
-CREATE DOMAIN positive_integer AS INTEGER CHECK (value > 0);
-CREATE DOMAIN unsigned_integer AS INTEGER CHECK (value >= 0);
-CREATE DOMAIN fhir_date AS TEXT CHECK (value ~*
-                                       '^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)?$');
-CREATE DOMAIN fhir_datetime AS TEXT CHECK (value ~*
-                                           '^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?$');
-CREATE DOMAIN fhir_time AS TEXT CHECK (value ~* '^([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?$');
 
-CREATE TABLE IF NOT EXISTS element (
-    id uuid PRIMARY KEY
-);
 
-CREATE TABLE IF NOT EXISTS meta (
-    id           uuid PRIMARY KEY NOT NULL,
-    version      TEXT,
-    last_updated fhir_datetime,
-    source       uri,
-    profile      uri[]
-);
 
-CREATE TABLE IF NOT EXISTS resource (
-    id             uuid PRIMARY KEY,
-    meta           uuid,
-    implicit_rules uri,
-    language       TEXT
-);
 
-CREATE TABLE IF NOT EXISTS extension (
-    id             uuid PRIMARY KEY,
-    element        uuid,
-    uri            uri            NOT NULL,
-    extension_type extension_type NOT NULL,
-    bin_value      bytea,
-    bool_value     bool,
-    uri_value      uri,
-    text_value     TEXT,
-    decimal_value  NUMERIC,
-    int_value      INTEGER,
-    uuid_value     uuid
-);
+
+
+
+
+
+
+
+
+
 
 CREATE TABLE IF NOT EXISTS backbone_element (
     id uuid PRIMARY KEY NOT NULL
@@ -122,7 +39,7 @@ CREATE TABLE IF NOT EXISTS author (
 CREATE TABLE IF NOT EXISTS annotation (
     id     uuid PRIMARY KEY NOT NULL,
     time   fhir_datetime,
-    text   TEXT NOT NULL,
+    text   TEXT             NOT NULL,
     author uuid
 );
 
@@ -147,10 +64,7 @@ CREATE TABLE IF NOT EXISTS coding (
     user_selected BOOLEAN
 );
 
-CREATE TABLE IF NOT EXISTS codeable_concept (
-    id   uuid PRIMARY KEY NOT NULL,
-    text TEXT
-);
+
 
 CREATE TABLE IF NOT EXISTS identifier (
     id           uuid PRIMARY KEY NOT NULL,
@@ -202,9 +116,9 @@ CREATE TABLE IF NOT EXISTS human_name (
     use          human_name_use,
     text         TEXT,
     family       TEXT,
-    given        TEXT[],
-    prefix       TEXT[],
-    suffix       TEXT[],
+    given        TEXT[] NOT NULL,
+    prefix       TEXT[] NOT NULL,
+    suffix       TEXT[] NOT NULL,
     period_start fhir_datetime,
     period_end   fhir_datetime
 );
@@ -214,15 +128,7 @@ CREATE TABLE IF NOT EXISTS coding_codeable_concept (
     coding           uuid
 );
 
-CREATE TABLE IF NOT EXISTS meta_security (
-    meta     uuid,
-    security uuid
-);
 
-CREATE TABLE IF NOT EXISTS meta_tag (
-    meta uuid,
-    tag  uuid
-);
 
 CREATE TABLE IF NOT EXISTS narrative (
     id     uuid PRIMARY KEY NOT NULL,
@@ -230,31 +136,15 @@ CREATE TABLE IF NOT EXISTS narrative (
     div    TEXT             NOT NULL
 );
 
-CREATE TABLE IF NOT EXISTS domain_resource (
-    id   uuid PRIMARY KEY NOT NULL,
-    text uuid
-);
 
-CREATE TABLE IF NOT EXISTS domain_resource_contained (
-    domain_resource uuid,
-    contained       uuid
-);
 
-CREATE TABLE IF NOT EXISTS domain_resource_extension (
-    domain_resource uuid,
-    extension       uuid
-);
 
-CREATE TABLE IF NOT EXISTS domain_resource_modifier_extension (
-    domain_resource    uuid,
-    modifier_extension uuid
-);
 
 CREATE TABLE IF NOT EXISTS organization (
     id      uuid PRIMARY KEY NOT NULL,
     active  boolean,
     name    TEXT,
-    alias   TEXT[],
+    alias   TEXT[] NOT NULL,
     part_of uuid
 );
 
@@ -329,16 +219,16 @@ CREATE TABLE IF NOT EXISTS organization_identifier (
 );
 
 CREATE TABLE IF NOT EXISTS practitioner (
-    id                    uuid PRIMARY KEY NOT NULL,
+    id                    uuid PRIMARY KEY    NOT NULL,
     status                practitioner_status NOT NULL,
     connection_type       uuid,
     name                  TEXT,
     managing_organization uuid,
     period_start          fhir_datetime,
     period_end            fhir_datetime,
-    payload_mimetype      TEXT[],
+    payload_mimetype      TEXT[] NOT NULL,
     address               uri                 NOT NULL,
-    header                TEXT[]
+    header                TEXT[] NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS practitioner_payload_type (
@@ -403,15 +293,15 @@ CREATE TABLE IF NOT EXISTS practitioner_role_identifier (
 
 CREATE TABLE IF NOT EXISTS endpoint (
     id                    uuid PRIMARY KEY NOT NULL,
-    status                endpoint_status NOT NULL,
+    status                endpoint_status  NOT NULL,
     connection_type       uuid,
     name                  TEXT,
     managing_organization uuid,
     period_start          fhir_datetime,
     period_end            fhir_datetime,
-    payload_mimetype      TEXT[],
-    address               uri             NOT NULL,
-    header                TEXT[]
+    payload_mimetype      TEXT[] NOT NULL,
+    address               uri              NOT NULL,
+    header                TEXT[] NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS endpoint_payload_type (
@@ -431,14 +321,14 @@ CREATE TABLE IF NOT EXISTS endpoint_identifier (
 
 CREATE TABLE IF NOT EXISTS not_available (
     id           uuid PRIMARY KEY NOT NULL,
-    description  TEXT NOT NULL,
+    description  TEXT             NOT NULL,
     during_start TEXT,
     during_end   TEXT
 );
 
 CREATE TABLE IF NOT EXISTS available_time (
     id                   uuid PRIMARY KEY NOT NULL,
-    day_of_week          day_of_week[],
+    day_of_week          day_of_week[] NOT NULL,
     all_day              boolean,
     available_start_time fhir_time,
     available_end_time   fhir_time
@@ -546,7 +436,7 @@ CREATE TABLE IF NOT EXISTS location (
     status                 location_status,
     operational_status     uuid,
     name                   TEXT,
-    alias                  TEXT[],
+    alias                  TEXT[] NOT NULL,
     description            TEXT,
     mode                   location_mode,
     address                uuid,
@@ -573,7 +463,7 @@ CREATE TABLE IF NOT EXISTS location_identifier (
 
 CREATE TABLE IF NOT EXISTS hours_of_operation (
     id           uuid PRIMARY KEY NOT NULL,
-    days_of_week day_of_week[],
+    days_of_week day_of_week[] NOT NULL,
     all_day      boolean,
     opening_time fhir_time,
     closing_time fhir_time
@@ -581,8 +471,8 @@ CREATE TABLE IF NOT EXISTS hours_of_operation (
 
 CREATE TABLE IF NOT EXISTS position (
     id        uuid PRIMARY KEY NOT NULL,
-    longitude DECIMAL NOT NULL,
-    latitude  DECIMAL NOT NULL,
+    longitude DECIMAL          NOT NULL,
+    latitude  DECIMAL          NOT NULL,
     altitude  DECIMAL
 );
 
@@ -602,7 +492,7 @@ CREATE TABLE IF NOT EXISTS address (
     use          address_use,
     type         address_type,
     text         TEXT,
-    line         TEXT[],
+    line         TEXT[] NOT NULL,
     city         TEXT,
     district     TEXT,
     state        TEXT,
@@ -667,14 +557,12 @@ CREATE TABLE IF NOT EXISTS patient_link (
     patient              uuid,
     other_patient        uuid,
     other_related_person uuid,
-    type                 link_type NOT NULL
+    type                 link_type        NOT NULL
 );
 
 ALTER TABLE resource
     ADD FOREIGN KEY (meta) REFERENCES meta (id),
     ADD FOREIGN KEY (id) REFERENCES element (id);
-ALTER TABLE extension
-    ADD FOREIGN KEY (element) REFERENCES element (id);
 ALTER TABLE annotation
     ADD FOREIGN KEY (author) REFERENCES author (id),
     ADD FOREIGN KEY (id) REFERENCES element (id);
