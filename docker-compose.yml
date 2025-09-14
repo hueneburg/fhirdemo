@@ -14,10 +14,17 @@ services:
     command: redis-server --requirepass mysecretpassword
     ports:
       - "6379:6379"
-  app:
+  server:
     build:
       context:
         server
     container_name: server
+    ports:
+      - "8080:8080"
+  app:
+    build:
+      context:
+        app
+    container_name: app
     ports:
       - "3000:3000"
