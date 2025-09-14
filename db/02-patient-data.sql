@@ -28,7 +28,39 @@ VALUES -- patient 1 address
        -- patient 1 contact 1
        ('00000000-0000-0000-0000-00000000000e'),
        -- patient 1 contact 2
-       ('00000000-0000-0000-0000-00000000000f');
+       ('00000000-0000-0000-0000-00000000000f'),
+       -- contact point
+       ('00000000-0000-0000-0000-000000000010'),
+       -- spouse
+       ('00000000-0000-0000-0000-000000000011'),
+       -- ex-spouse
+       ('00000000-0000-0000-0000-000000000012'),
+       -- extension 1
+       ('00000000-0000-0000-0000-000000000013'),
+       -- extension 2
+       ('00000000-0000-0000-0000-000000000014'),
+       -- meta
+       ('00000000-0000-0000-0000-000000000015'),
+       -- coding public
+       ('00000000-0000-0000-0000-000000000016'),
+       -- narrative
+       ('00000000-0000-0000-0000-000000000017'),
+       -- married
+       ('00000000-0000-0000-0000-000000000018'),
+       -- patient link 1
+       ('00000000-0000-0000-0000-000000000019'),
+       -- patient link 2
+       ('00000000-0000-0000-0000-00000000001a'),
+       -- patient identifier
+       ('00000000-0000-0000-0000-00000000001b'),
+       -- Dr Alban reference
+       ('00000000-0000-0000-0000-00000000001c'),
+       -- patient 1reference
+       ('00000000-0000-0000-0000-00000000001d'),
+       -- patient 2 reference
+       ('00000000-0000-0000-0000-00000000001e'),
+       -- nested extension
+       ('00000000-0000-0000-0000-00000000001f');
 
 INSERT INTO address (id, use, type, text, line, city, district, state, postal_code, country, period_start, period_end)
 VALUES ('00000000-0000-0000-0000-000000000000', 'HOME', 'BOTH', 'Musterstr. 31\n00000 Musterdorf',
@@ -52,12 +84,19 @@ VALUES -- patient 1 communication 1
        -- patient 1 contact 1
        ('00000000-0000-0000-0000-00000000000e'),
        -- patient 1 contact 2
-       ('00000000-0000-0000-0000-00000000000f');
+       ('00000000-0000-0000-0000-00000000000f'),
+       -- patient link 1
+       ('00000000-0000-0000-0000-000000000019'),
+       -- patient link 2
+       ('00000000-0000-0000-0000-00000000001a');
 
 INSERT INTO codeable_concept (id, text)
 VALUES ('00000000-0000-0000-0000-000000000009', 'en-US'),
        ('00000000-0000-0000-0000-00000000000a', 'fr-FR'),
-       ('00000000-0000-0000-0000-00000000000d', 'Staat');
+       ('00000000-0000-0000-0000-00000000000d', 'Staat'),
+       ('00000000-0000-0000-0000-000000000011', 'Spouse'),
+       ('00000000-0000-0000-0000-000000000012', 'Ex-Spouse'),
+       ('00000000-0000-0000-0000-000000000018', 'married');
 
 INSERT INTO communication (id, language, preferred)
 VALUES -- patient 1 communication 1
@@ -83,14 +122,136 @@ VALUES -- patient 1 contact 1 human name 1
 
 INSERT INTO identifier (id, use, type, system, value, period_start, period_end)
 VALUES ('00000000-0000-0000-0000-00000000000c', 'OFFICIAL', '00000000-0000-0000-0000-00000000000d',
-        '/identifier/system/franz-kaiser', 'Franzoesisches Kaiserreich', '1805-08-07', '1817-05-31');
+        '/identifier/system/franz-kaiser', 'Franzoesisches Kaiserreich', '1805-08-07', '1817-05-31'),
+       ('00000000-0000-0000-0000-00000000001b', 'OLD', '00000000-0000-0000-0000-00000000000d',
+        '/identifier/system/blargh', 'some identifier', '2025-12-01', NULL);
 
 INSERT INTO reference (id, reference, type, identifier, display)
 VALUES ('00000000-0000-0000-0000-00000000000b', 'some org reference', 'organization',
-        '00000000-0000-0000-0000-00000000000c', 'Franzoesisches Kaiserreich');
+        '00000000-0000-0000-0000-00000000000c', 'Franzoesisches Kaiserreich'),
+       ('00000000-0000-0000-0000-00000000001c', 'some practitioner reference', 'practitioner',
+        '00000000-0000-0000-0000-00000000001b', 'Dr Alban'),
+       ('00000000-0000-0000-0000-00000000001d', 'patient 1', 'patient', '00000000-0000-0000-0000-00000000001b',
+        'Napoleon Bonaparte'),
+       ('00000000-0000-0000-0000-00000000001e', 'patient 1', 'patient', '00000000-0000-0000-0000-00000000001b',
+        'Napoleon Bonaparte');
 
 INSERT INTO contact (id, name, address, gender, organization, period_start, period_end)
 VALUES ('00000000-0000-0000-0000-00000000000e', '00000000-0000-0000-0000-000000000006',
-        '00000000-0000-0000-0000-000000000000', 'FEMALE', '00000000-0000-0000-0000-00000000000b', '2020-08-02', '2021-07-06'),
+        '00000000-0000-0000-0000-000000000000', 'FEMALE', '00000000-0000-0000-0000-00000000000b', '2020-08-02',
+        '2021-07-06'),
        ('00000000-0000-0000-0000-00000000000f', '00000000-0000-0000-0000-000000000007',
-        '00000000-0000-0000-0000-000000000000', 'FEMALE', '00000000-0000-0000-0000-00000000000b', '2020-07-03', '2021-11-22')
+        '00000000-0000-0000-0000-000000000000', 'FEMALE', '00000000-0000-0000-0000-00000000000b', '2020-07-03',
+        '2021-11-22');
+
+INSERT INTO contact_relationship (contact, relationship)
+VALUES ('00000000-0000-0000-0000-00000000000e', '00000000-0000-0000-0000-000000000012'),
+       ('00000000-0000-0000-0000-00000000000f', '00000000-0000-0000-0000-000000000011');
+
+INSERT INTO contact_point (id, system, value, use, rank, period_start, period_end)
+VALUES ('00000000-0000-0000-0000-000000000010', 'PHONE', '0123456789', 'HOME', 1, '2000-08-01', NULL);
+
+INSERT INTO contact_contact_point (contact, contact_point)
+VALUES ('00000000-0000-0000-0000-00000000000e', '00000000-0000-0000-0000-000000000010'),
+       ('00000000-0000-0000-0000-00000000000f', '00000000-0000-0000-0000-000000000010');
+
+INSERT INTO coding (id, system, uri, code, display, user_selected)
+VALUES ('00000000-0000-0000-0000-000000000016', 'https://example.com/coding/system', 'https://example.com/coding/1',
+        'PUBLIC', 'Public Knowledge', FALSE);
+
+INSERT INTO codeable_concept_coding(codeable_concept, coding)
+VALUES ('00000000-0000-0000-0000-00000000000d', '00000000-0000-0000-0000-000000000016');
+
+INSERT INTO extension (id, uri, value)
+VALUES ('00000000-0000-0000-0000-000000000013', 'https://example.com/fhir/extension/1', '1'),
+       ('00000000-0000-0000-0000-000000000014', 'https://example.com/fhir/extension/2', '2'),
+       ('00000000-0000-0000-0000-00000000001f', 'https://example.com/fhir/extension/nested', '[]');
+
+INSERT INTO backbone_element_modifier_extension (backbone_element, modifier_extension)
+VALUES ('00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000013'),
+       ('00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000014');
+
+INSERT INTO element_extension (element, extension)
+VALUES ('00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000013'),
+       ('00000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000014'),
+       ('00000000-0000-0000-0000-000000000013', '00000000-0000-0000-0000-00000000001f');
+
+INSERT INTO meta (id, version, last_updated, source, profile)
+VALUES ('00000000-0000-0000-0000-000000000015', '1', '2025-09-13T13:32:20+09:00', 'https://example.com/meta/source',
+        ARRAY ['https://example.com/meta/profile']);
+
+INSERT INTO meta_tag (meta, tag)
+VALUES ('00000000-0000-0000-0000-000000000015', '00000000-0000-0000-0000-000000000016');
+
+INSERT INTO meta_security (meta, security)
+VALUES ('00000000-0000-0000-0000-000000000015', '00000000-0000-0000-0000-000000000016');
+
+INSERT INTO narrative (id, status, div)
+VALUES ('00000000-0000-0000-0000-000000000017', 'GENERATED', '<p>Some narrative</p>');
+
+INSERT INTO resource (id, meta, implicit_rules, language)
+VALUES -- patient 1
+       ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000015',
+        'https://example.com/fhir/rules/1', 'en-US'),
+       -- patient 2
+       ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000015',
+        'https://example.com/fhir/rules/1', 'en-US');
+
+INSERT INTO domain_resource (id, text)
+VALUES -- patient 0
+       ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000017'),
+       -- patient 1
+       ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000017');
+
+INSERT INTO domain_resource_extension (domain_resource, extension)
+VALUES ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000013');
+
+INSERT INTO domain_resource_modifier_extension (domain_resource, modifier_extension)
+VALUES ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000014');
+
+INSERT INTO patient (id, active, gender, birthdate, deceased, deceased_date_time, marital_status, multiple_birth,
+                     multiple_birth_integer, managing_organization)
+VALUES ('00000000-0000-0000-0000-000000000000', TRUE, 'MALE', '1992-07-12', FALSE, NULL,
+        '00000000-0000-0000-0000-000000000018', TRUE, 3, '00000000-0000-0000-0000-00000000000b'),
+       ('00000000-0000-0000-0000-000000000001', FALSE, 'MALE', '1991-07-12', FALSE, NULL,
+        '00000000-0000-0000-0000-000000000018', TRUE, 2, '00000000-0000-0000-0000-00000000000b');
+
+INSERT INTO patient_address (patient, address)
+VALUES ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000000'),
+       ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000000');
+
+INSERT INTO patient_communication (patient, communication)
+VALUES ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000003'),
+       ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000004'),
+       ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000003'),
+       ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000004');
+
+INSERT INTO patient_contact (patient, contact)
+VALUES ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-00000000000e'),
+       ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000000e');
+
+INSERT INTO patient_general_practitioner (patient, general_practitioner)
+VALUES ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-00000000001c'),
+       ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001c');
+
+INSERT INTO patient_identifier (patient, identifier)
+VALUES ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-00000000001b'),
+       ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-00000000001b');
+
+INSERT INTO patient_link (id, patient, other, type)
+VALUES ('00000000-0000-0000-0000-000000000019', '00000000-0000-0000-0000-000000000000',
+        '00000000-0000-0000-0000-00000000001e', 'REPLACES'),
+       ('00000000-0000-0000-0000-00000000001a', '00000000-0000-0000-0000-000000000001',
+        '00000000-0000-0000-0000-00000000001d', 'REPLACED-BY');
+
+INSERT INTO patient_name (patient, name)
+VALUES ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000008'),
+       ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000008');
+
+INSERT INTO patient_photo (patient, photo)
+VALUES ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000001'),
+       ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000001');
+
+INSERT INTO patient_telecom (patient, telecom)
+VALUES ('00000000-0000-0000-0000-000000000000', '00000000-0000-0000-0000-000000000010'),
+       ('00000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000010');

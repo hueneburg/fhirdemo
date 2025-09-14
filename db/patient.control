@@ -1,0 +1,3 @@
+comment = 'Extension for FHIR Patient resources'
+default_version = '1.0'
+relocatable = true

@@ -53,8 +53,8 @@ CREATE TABLE IF NOT EXISTS resource (
 );
 
 CREATE TABLE IF NOT EXISTS extension (
-    id    uuid PRIMARY KEY,
-    uri   TEXT NOT NULL,
+    id    uuid PRIMARY KEY NOT NULL REFERENCES element (id),
+    uri   TEXT             NOT NULL,
     value jsonb
 );
 
@@ -87,6 +87,11 @@ CREATE TABLE IF NOT EXISTS domain_resource_modifier_extension (
 CREATE TABLE IF NOT EXISTS codeable_concept (
     id   uuid PRIMARY KEY NOT NULL REFERENCES element (id),
     text TEXT
+);
+
+CREATE TABLE IF NOT EXISTS codeable_concept_coding (
+    codeable_concept uuid NOT NULL REFERENCES codeable_concept (id),
+    coding           uuid NOT NULL REFERENCES coding (id)
 );
 
 CREATE TABLE IF NOT EXISTS patient (
@@ -124,15 +129,21 @@ CREATE TABLE IF NOT EXISTS backbone_element (
     id uuid PRIMARY KEY NOT NULL REFERENCES element (id)
 );
 
-CREATE TABLE IF NOT EXISTS backbone_element_extension (
-    backbone_element uuid NOT NULL REFERENCES element (id),
-    extension        uuid NOT NULL REFERENCES extension (id)
+CREATE TABLE IF NOT EXISTS element_extension (
+    element   uuid NOT NULL REFERENCES element (id),
+    extension uuid NOT NULL REFERENCES extension (id)
+);
+
+CREATE TABLE IF NOT EXISTS backbone_element_modifier_extension (
+    backbone_element   uuid NOT NULL REFERENCES backbone_element (id),
+    modifier_extension uuid NOT NULL REFERENCES extension (id)
 );
 
 CREATE TABLE IF NOT EXISTS patient_link (
-    id    uuid PRIMARY KEY NOT NULL REFERENCES backbone_element (id),
-    other uuid REFERENCES reference (id),
-    type  link_type        NOT NULL
+    id      uuid PRIMARY KEY NOT NULL REFERENCES backbone_element (id),
+    patient uuid             NOT NULL REFERENCES patient (id),
+    other   uuid REFERENCES reference (id),
+    type    link_type        NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS patient_general_practitioner (
@@ -270,8 +281,10 @@ CREATE INDEX idx_patient_communication_patient ON patient_communication (patient
 CREATE INDEX idx_patient_communication_communication ON patient_communication (communication);
 CREATE INDEX idx_patient_general_practitioner_patient ON patient_general_practitioner (patient);
 CREATE INDEX idx_patient_general_practitioner_general_practitioner ON patient_general_practitioner (general_practitioner);
-CREATE INDEX idx_backbone_element_extension_backbone_element ON backbone_element_extension (backbone_element);
-CREATE INDEX idx_backbone_element_extension_extension ON backbone_element_extension (extension);
+CREATE INDEX idx_element_extension_backbone_element ON element_extension (element);
+CREATE INDEX idx_extension_extension ON element_extension (extension);
+CREATE INDEX idx_backbone_element_extension_backbone_element ON backbone_element_modifier_extension (backbone_element);
+CREATE INDEX idx_backbone_extension_extension ON backbone_element_modifier_extension (modifier_extension);
 CREATE INDEX idx_meta_security_meta ON meta_security (meta);
 CREATE INDEX idx_meta_security_security ON meta_security (security);
 CREATE INDEX idx_meta_tag_meta ON meta_tag (meta);
