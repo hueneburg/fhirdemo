@@ -11,5 +11,9 @@ tracing-opentelemetry = "0.31.0"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["fmt", "env-filter"] }
 serde = { version = "1.0.219", features = ["derive"] }
-tokio-postgres = "0.7.13"
+tokio-postgres = { version = "0.7.13", features = ["with-uuid-1"] }
 redis = { version = "0.32.5", features = ["tokio-comp"] }
+uuid = "1.18.1"
+deadpool = "0.12.3"
+deadpool-postgres = "0.14.1"
+deadpool-redis = "0.22.0"
