@@ -1,264 +1,265 @@
-CREATE TYPE gender AS ENUM ('FEMALE', 'MALE', 'OTHER', 'UNKNOWN');
-CREATE TYPE link_type AS ENUM ('REPLACED-BY', 'REPLACES', 'REFER', 'SEEALSO');
-CREATE TYPE narrative_status AS ENUM ('GENERATED', 'EXTENSIONS', 'ADDITIONAL', 'EMPTY');
-CREATE TYPE identifier_use AS ENUM ('USUAL', 'OFFICIAL', 'TEMP', 'OLD');
-CREATE TYPE human_name_use AS ENUM ('USUAL', 'OFFICIAL', 'TEMP', 'NICKNAME', 'ANONYMOUS', 'OLD', 'MAIDEN');
-CREATE TYPE address_use AS ENUM ('HOME', 'WORK', 'TEMP', 'OLD', 'BILLING');
-CREATE TYPE address_type AS ENUM ('POSTAL', 'PHYSICAL', 'BOTH');
-CREATE TYPE contact_point_system AS ENUM ('PHONE', 'FAX', 'EMAIL', 'PAGER', 'URL', 'SMS', 'OTHER');
-CREATE TYPE contact_point_use AS ENUM ('HOME', 'WORK', 'TEMP', 'OLD', 'MOBILE');
+CREATE TYPE GENDER AS ENUM ('FEMALE', 'MALE', 'OTHER', 'UNKNOWN');
+CREATE TYPE LINK_TYPE AS ENUM ('REPLACED-BY', 'REPLACES', 'REFER', 'SEEALSO');
+CREATE TYPE NARRATIVE_STATUS AS ENUM ('GENERATED', 'EXTENSIONS', 'ADDITIONAL', 'EMPTY');
+CREATE TYPE IDENTIFIER_USE AS ENUM ('USUAL', 'OFFICIAL', 'TEMP', 'OLD');
+CREATE TYPE HUMAN_NAME_USE AS ENUM ('USUAL', 'OFFICIAL', 'TEMP', 'NICKNAME', 'ANONYMOUS', 'OLD', 'MAIDEN');
+CREATE TYPE ADDRESS_USE AS ENUM ('HOME', 'WORK', 'TEMP', 'OLD', 'BILLING');
+CREATE TYPE ADDRESS_TYPE AS ENUM ('POSTAL', 'PHYSICAL', 'BOTH');
+CREATE TYPE CONTACT_POINT_SYSTEM AS ENUM ('PHONE', 'FAX', 'EMAIL', 'PAGER', 'URL', 'SMS', 'OTHER');
+CREATE TYPE CONTACT_POINT_USE AS ENUM ('HOME', 'WORK', 'TEMP', 'OLD', 'MOBILE');
 
 CREATE DOMAIN unsigned_integer AS INTEGER CHECK (value >= 0);
 CREATE DOMAIN positive_integer AS INTEGER CHECK (value > 0);
 CREATE DOMAIN fhir_date AS TEXT CHECK (value ~*
                                        '^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)?$');
-CREATE DOMAIN fhir_time AS TEXT CHECK (value ~* '^([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?$');
+CREATE DOMAIN fhir_datetime AS TEXT CHECK (value ~*
+                                           '^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1])(T([01][0-9]|2[0-3]):[0-5][0-9]:([0-5][0-9]|60)(\.[0-9]+)?(Z|(\+|-)((0[0-9]|1[0-3]):[0-5][0-9]|14:00)))?)?)?$');
 
 CREATE TABLE IF NOT EXISTS element (
-    id uuid PRIMARY KEY
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid()
 );
 
 CREATE TABLE IF NOT EXISTS coding (
-    id            uuid PRIMARY KEY REFERENCES element (id),
+    id            UUID PRIMARY KEY REFERENCES element (id),
     system        TEXT,
-    uri           TEXT,
     code          TEXT,
     display       TEXT,
     user_selected BOOLEAN
 );
 
 CREATE TABLE IF NOT EXISTS meta (
-    id           uuid PRIMARY KEY NOT NULL,
+    id           UUID PRIMARY KEY NOT NULL,
     version      TEXT,
-    last_updated TIMESTAMP,
+    last_updated TIMESTAMPTZ,
     source       TEXT,
     profile      TEXT[]           NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS meta_security (
-    meta     uuid NOT NULL REFERENCES meta (id),
-    security uuid NOT NULL REFERENCES coding (id)
+    meta     UUID NOT NULL REFERENCES meta (id),
+    security UUID NOT NULL REFERENCES coding (id)
 );
 
 CREATE TABLE IF NOT EXISTS meta_tag (
-    meta uuid NOT NULL REFERENCES meta (id),
-    tag  uuid NOT NULL REFERENCES coding (id)
+    meta UUID NOT NULL REFERENCES meta (id),
+    tag  UUID NOT NULL REFERENCES coding (id)
 );
 
 CREATE TABLE IF NOT EXISTS resource (
-    id             uuid PRIMARY KEY,
-    meta           uuid REFERENCES meta (id),
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    meta           UUID REFERENCES meta (id),
     implicit_rules TEXT,
     language       TEXT
 );
 
 CREATE TABLE IF NOT EXISTS extension (
-    id    uuid PRIMARY KEY NOT NULL REFERENCES element (id),
+    id    UUID PRIMARY KEY NOT NULL REFERENCES element (id),
     uri   TEXT             NOT NULL,
-    value jsonb
+    value JSONB
 );
 
 CREATE TABLE IF NOT EXISTS narrative (
-    id     uuid PRIMARY KEY NOT NULL REFERENCES element (id),
-    status narrative_status NOT NULL,
+    id     UUID PRIMARY KEY NOT NULL REFERENCES element (id),
+    status NARRATIVE_STATUS NOT NULL,
     div    TEXT             NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS domain_resource (
-    id   uuid PRIMARY KEY NOT NULL REFERENCES resource (id),
-    text uuid REFERENCES narrative (id)
+    id   UUID PRIMARY KEY NOT NULL REFERENCES resource (id),
+    text UUID REFERENCES narrative (id)
 );
 
 CREATE TABLE IF NOT EXISTS domain_resource_contained (
-    domain_resource uuid NOT NULL REFERENCES domain_resource (id),
-    contained       uuid NOT NULL REFERENCES resource (id)
+    domain_resource UUID NOT NULL REFERENCES domain_resource (id),
+    contained       UUID NOT NULL REFERENCES resource (id)
 );
 
 CREATE TABLE IF NOT EXISTS domain_resource_extension (
-    domain_resource uuid NOT NULL REFERENCES domain_resource (id),
-    extension       uuid NOT NULL REFERENCES extension (id)
+    domain_resource UUID NOT NULL REFERENCES domain_resource (id),
+    extension       UUID NOT NULL REFERENCES extension (id)
 );
 
 CREATE TABLE IF NOT EXISTS domain_resource_modifier_extension (
-    domain_resource    uuid NOT NULL REFERENCES domain_resource (id),
-    modifier_extension uuid NOT NULL REFERENCES extension (id)
+    domain_resource    UUID NOT NULL REFERENCES domain_resource (id),
+    modifier_extension UUID NOT NULL REFERENCES extension (id)
 );
 
 CREATE TABLE IF NOT EXISTS codeable_concept (
-    id   uuid PRIMARY KEY NOT NULL REFERENCES element (id),
+    id   UUID PRIMARY KEY NOT NULL REFERENCES element (id),
     text TEXT
 );
 
 CREATE TABLE IF NOT EXISTS codeable_concept_coding (
-    codeable_concept uuid NOT NULL REFERENCES codeable_concept (id),
-    coding           uuid NOT NULL REFERENCES coding (id)
+    codeable_concept UUID NOT NULL REFERENCES codeable_concept (id),
+    coding           UUID NOT NULL REFERENCES coding (id)
 );
 
 CREATE TABLE IF NOT EXISTS patient (
-    id                     uuid PRIMARY KEY NOT NULL REFERENCES domain_resource (id),
-    active                 bool,
-    gender                 gender,
-    birthdate              fhir_date,
-    deceased               bool,
-    deceased_date_time     TIMESTAMP,
-    marital_status         uuid REFERENCES codeable_concept (id),
-    multiple_birth         bool,
+    id                     UUID PRIMARY KEY NOT NULL REFERENCES domain_resource (id),
+    active                 BOOL,
+    gender                 GENDER,
+    birthdate              FHIR_DATE,
+    deceased               BOOL,
+    deceased_date_time     FHIR_DATETIME,
+    marital_status         UUID REFERENCES codeable_concept (id),
+    multiple_birth         BOOL,
     multiple_birth_integer INTEGER,
-    managing_organization  uuid -- would reference organization but left out for this demo
+    managing_organization  UUID -- would reference organization but left out for this demo
 );
 
 CREATE TABLE IF NOT EXISTS identifier (
-    id           uuid PRIMARY KEY NOT NULL REFERENCES element (id),
-    use          identifier_use,
-    type         uuid REFERENCES codeable_concept (id),
-    system       text,
-    value        text,
-    period_start TIMESTAMP,
-    period_end   TIMESTAMP
+    id           UUID PRIMARY KEY NOT NULL REFERENCES element (id),
+    use          IDENTIFIER_USE,
+    type         UUID REFERENCES codeable_concept (id),
+    system       TEXT,
+    value        TEXT,
+    period_start TIMESTAMPTZ,
+    period_end   TIMESTAMPTZ,
+    assigner     UUID
 );
 
 CREATE TABLE IF NOT EXISTS reference (
-    id         uuid PRIMARY KEY NOT NULL REFERENCES element (id),
+    id         UUID PRIMARY KEY NOT NULL REFERENCES element (id),
     reference  TEXT,
     type       TEXT,
-    identifier uuid REFERENCES identifier (id),
+    identifier UUID REFERENCES identifier (id),
     display    TEXT
 );
 
 CREATE TABLE IF NOT EXISTS backbone_element (
-    id uuid PRIMARY KEY NOT NULL REFERENCES element (id)
+    id UUID PRIMARY KEY NOT NULL REFERENCES element (id)
 );
 
 CREATE TABLE IF NOT EXISTS element_extension (
-    element   uuid NOT NULL REFERENCES element (id),
-    extension uuid NOT NULL REFERENCES extension (id)
+    element   UUID NOT NULL REFERENCES element (id),
+    extension UUID NOT NULL REFERENCES extension (id)
 );
 
 CREATE TABLE IF NOT EXISTS backbone_element_modifier_extension (
-    backbone_element   uuid NOT NULL REFERENCES backbone_element (id),
-    modifier_extension uuid NOT NULL REFERENCES extension (id)
+    backbone_element   UUID NOT NULL REFERENCES backbone_element (id),
+    modifier_extension UUID NOT NULL REFERENCES extension (id)
 );
 
 CREATE TABLE IF NOT EXISTS patient_link (
-    id      uuid PRIMARY KEY NOT NULL REFERENCES backbone_element (id),
-    patient uuid             NOT NULL REFERENCES patient (id),
-    other   uuid REFERENCES reference (id),
-    type    link_type        NOT NULL
+    id      UUID PRIMARY KEY NOT NULL REFERENCES backbone_element (id),
+    patient UUID             NOT NULL REFERENCES patient (id),
+    other   UUID REFERENCES reference (id),
+    type    LINK_TYPE        NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS patient_general_practitioner (
-    patient              uuid NOT NULL REFERENCES patient (id),
-    general_practitioner uuid NOT NULL REFERENCES reference (id)
+    patient              UUID NOT NULL REFERENCES patient (id),
+    general_practitioner UUID NOT NULL REFERENCES reference (id)
 );
 
 CREATE TABLE IF NOT EXISTS communication (
-    id        uuid PRIMARY KEY NOT NULL REFERENCES backbone_element (id),
-    language  uuid             NOT NULL REFERENCES codeable_concept (id),
-    preferred boolean
+    id        UUID PRIMARY KEY NOT NULL REFERENCES backbone_element (id),
+    language  UUID             NOT NULL REFERENCES codeable_concept (id),
+    preferred BOOLEAN
 );
 
 CREATE TABLE IF NOT EXISTS patient_communication (
-    patient       uuid NOT NULL REFERENCES patient (id),
-    communication uuid NOT NULL REFERENCES communication (id)
+    patient       UUID NOT NULL REFERENCES patient (id),
+    communication UUID NOT NULL REFERENCES communication (id)
 );
 
 CREATE TABLE IF NOT EXISTS human_name (
-    id           uuid PRIMARY KEY NOT NULL REFERENCES element (id),
-    use          human_name_use,
-    text         text,
-    family       text,
+    id           UUID PRIMARY KEY NOT NULL REFERENCES element (id),
+    use          HUMAN_NAME_USE,
+    text         TEXT,
+    family       TEXT,
     given        TEXT[]           NOT NULL,
-    prefix       text[]           NOT NULL,
-    suffix       text[]           NOT NULL,
-    period_start TIMESTAMP,
-    period_end   TIMESTAMP
+    prefix       TEXT[]           NOT NULL,
+    suffix       TEXT[]           NOT NULL,
+    period_start TIMESTAMPTZ,
+    period_end   TIMESTAMPTZ
 );
 
 CREATE TABLE IF NOT EXISTS address (
-    id           uuid PRIMARY KEY NOT NULL REFERENCES element (id),
-    use          address_use,
-    type         address_type,
-    text         text,
-    line         text[]           NOT NULL,
-    city         text,
-    district     text,
-    state        text,
-    postal_code  text,
-    country      text,
-    period_start TIMESTAMP,
-    period_end   TIMESTAMP
+    id           UUID PRIMARY KEY NOT NULL REFERENCES element (id),
+    use          ADDRESS_USE,
+    type         ADDRESS_TYPE,
+    text         TEXT,
+    line         TEXT[]           NOT NULL,
+    city         TEXT,
+    district     TEXT,
+    state        TEXT,
+    postal_code  TEXT,
+    country      TEXT,
+    period_start TIMESTAMPTZ,
+    period_end   TIMESTAMPTZ
 );
 
 CREATE TABLE IF NOT EXISTS contact (
-    id           uuid PRIMARY KEY NOT NULL REFERENCES backbone_element (id),
-    name         uuid REFERENCES human_name (id),
-    address      uuid REFERENCES address (id),
-    gender       gender,
-    organization uuid REFERENCES reference (id),
-    period_start TIMESTAMP,
-    period_end   TIMESTAMP
+    id           UUID PRIMARY KEY NOT NULL REFERENCES backbone_element (id),
+    name         UUID REFERENCES human_name (id),
+    address      UUID REFERENCES address (id),
+    gender       GENDER,
+    organization UUID REFERENCES reference (id),
+    period_start TIMESTAMPTZ,
+    period_end   TIMESTAMPTZ
 );
 
 CREATE TABLE IF NOT EXISTS contact_relationship (
-    contact      uuid NOT NULL REFERENCES contact (id),
-    relationship uuid NOT NULL REFERENCES codeable_concept (id)
+    contact      UUID NOT NULL REFERENCES contact (id),
+    relationship UUID NOT NULL REFERENCES codeable_concept (id)
 );
 
 CREATE TABLE IF NOT EXISTS patient_contact (
-    patient uuid NOT NULL REFERENCES patient (id),
-    contact uuid NOT NULL REFERENCES contact (id)
+    patient UUID NOT NULL REFERENCES patient (id),
+    contact UUID NOT NULL REFERENCES contact (id)
 );
 
 CREATE TABLE IF NOT EXISTS patient_address (
-    patient uuid NOT NULL REFERENCES patient (id),
-    address uuid NOT NULL REFERENCES address (id)
+    patient UUID NOT NULL REFERENCES patient (id),
+    address UUID NOT NULL REFERENCES address (id)
 );
 
 CREATE TABLE IF NOT EXISTS patient_name (
-    patient uuid NOT NULL REFERENCES patient (id),
-    name    uuid NOT NULL REFERENCES human_name (id)
+    patient UUID NOT NULL REFERENCES patient (id),
+    name    UUID NOT NULL REFERENCES human_name (id)
 );
 
 CREATE TABLE IF NOT EXISTS contact_point (
-    id           uuid PRIMARY KEY NOT NULL REFERENCES element (id),
-    system       contact_point_system,
-    value        text,
-    use          contact_point_use,
-    rank         positive_integer,
-    period_start TIMESTAMP,
-    period_end   TIMESTAMP
+    id           UUID PRIMARY KEY NOT NULL REFERENCES element (id),
+    system       CONTACT_POINT_SYSTEM,
+    value        TEXT,
+    use          CONTACT_POINT_USE,
+    rank         POSITIVE_INTEGER,
+    period_start TIMESTAMPTZ,
+    period_end   TIMESTAMPTZ
 );
 
 CREATE TABLE IF NOT EXISTS contact_contact_point (
-    contact       uuid NOT NULL REFERENCES contact (id),
-    contact_point uuid NOT NULL REFERENCES contact_point (id)
+    contact       UUID NOT NULL REFERENCES contact (id),
+    contact_point UUID NOT NULL REFERENCES contact_point (id)
 );
 
 CREATE TABLE IF NOT EXISTS patient_telecom (
-    patient uuid NOT NULL REFERENCES patient (id),
-    telecom uuid NOT NULL REFERENCES contact_point (id)
+    patient UUID NOT NULL REFERENCES patient (id),
+    telecom UUID NOT NULL REFERENCES contact_point (id)
 );
 
 CREATE TABLE IF NOT EXISTS patient_identifier (
-    patient    uuid NOT NULL REFERENCES patient (id),
-    identifier uuid NOT NULL REFERENCES identifier (id)
+    patient    UUID NOT NULL REFERENCES patient (id),
+    identifier UUID NOT NULL REFERENCES identifier (id)
 );
 
 CREATE TABLE IF NOT EXISTS attachment (
-    id           uuid PRIMARY KEY NOT NULL REFERENCES element (id),
-    content_type text,
-    language     text,
-    data         bytea,
-    url          text,
-    size         unsigned_integer,
-    hash         bytea,
-    title        text,
-    creation     TIMESTAMP
+    id           UUID PRIMARY KEY NOT NULL REFERENCES element (id),
+    content_type TEXT,
+    language     TEXT,
+    data         BYTEA,
+    url          TEXT,
+    size         UNSIGNED_INTEGER,
+    hash         BYTEA,
+    title        TEXT,
+    creation     TIMESTAMPTZ
 );
 
 CREATE TABLE IF NOT EXISTS patient_photo (
-    patient uuid NOT NULL REFERENCES patient (id),
-    photo   uuid NOT NULL REFERENCES attachment (id)
+    patient UUID NOT NULL REFERENCES patient (id),
+    photo   UUID NOT NULL REFERENCES attachment (id)
 );
 
 CREATE INDEX idx_patient_photo_patient ON patient_photo (patient);
@@ -298,3 +299,7 @@ CREATE INDEX idx_domain_resource_modifier_extension_modifier_extension ON domain
 
 CREATE INDEX idx_human_name_text ON human_name (text);
 CREATE INDEX idx_patient_birthdate ON patient (birthdate);
+CREATE UNIQUE INDEX uniq_idx_element_extension ON element_extension (element, extension);
+
+ALTER TABLE identifier
+    ADD CONSTRAINT fk_identifier_reference FOREIGN KEY (assigner) REFERENCES reference (id);

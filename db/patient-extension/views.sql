@@ -29,13 +29,13 @@ WITH RECURSIVE
                                                                  'id', c.id,
                                                                  'uri', c.uri,
                                                                  'value', c.value,
-                                                                 'extension', '[]'::jsonb
+                                                                 'extension', '[]'::JSONB
                                                          ) AS child_json
                                                   FROM element_extension ee
                                                            JOIN extension c ON c.id = ee.extension
                                                   WHERE ee.element = t.id) sub
                                             WHERE child_json IS NOT NULL),
-                                           '[]'::jsonb
+                                           '[]'::JSONB
                                                 )
                            ) AS json
                     FROM extension t)
@@ -242,20 +242,20 @@ WITH RECURSIVE
                                                      'id', c.id,
                                                      'uri', c.uri,
                                                      'value', c.value,
-                                                     'extension', '[]'::jsonb
+                                                     'extension', '[]'::JSONB
                                              ) AS child_json
                                       FROM element_extension ee
                                                JOIN extension c ON c.id = ee.extension
                                       WHERE ee.element = t.id) sub
                                 WHERE child_json IS NOT NULL),
-                               '[]'::jsonb
+                               '[]'::JSONB
                                     )
                ) AS json
         FROM extension t)
 SELECT b.id AS id,
        COALESCE(
                        JSONB_AGG(n.json ORDER BY n.id) FILTER (WHERE n.json IS NOT NULL),
-                       '[]'::jsonb
+                       '[]'::JSONB
        )    AS modifier_extension
 FROM backbone_element b
          LEFT JOIN backbone_element_modifier_extension bex
@@ -434,7 +434,7 @@ WITH RECURSIVE resource_tree AS (
     SELECT dr.id      AS root_id,
            dr.id      AS id,
            dr.text,
-           NULL::uuid AS parent_id
+           NULL::UUID AS parent_id
     FROM domain_resource dr
 
     UNION ALL
@@ -442,7 +442,7 @@ WITH RECURSIVE resource_tree AS (
     -- Recursive step: add contained resources
     SELECT t.root_id,
            c.contained       AS id,
-           NULL::uuid        AS text,
+           NULL::UUID        AS text,
            c.domain_resource AS parent_id
     FROM resource_tree t
              JOIN domain_resource_contained c
@@ -454,7 +454,7 @@ WITH RECURSIVE resource_tree AS (
            JSONB_BUILD_OBJECT(
                    'id', t.id,
                    'text', t.text,
-                   'contained', '[]'::jsonb
+                   'contained', '[]'::JSONB
            ) AS json_obj,
            t.parent_id
     FROM resource_tree t)
@@ -524,7 +524,7 @@ WITH RECURSIVE
                        'id', et.id,
                        'uri', et.uri,
                        'value', et.value,
-                       'extensions', '[]'::jsonb
+                       'extensions', '[]'::JSONB
                ) AS node
         FROM extension_tree et),
     aggregated AS (
@@ -533,7 +533,7 @@ WITH RECURSIVE
                p.id,
                p.node || JSONB_BUILD_OBJECT(
                        'extensions',
-                       COALESCE(JSONB_AGG(c.node) FILTER (WHERE c.id IS NOT NULL), '[]'::jsonb)
+                       COALESCE(JSONB_AGG(c.node) FILTER (WHERE c.id IS NOT NULL), '[]'::JSONB)
                          ) AS node
         FROM json_tree p
                  LEFT JOIN element_extension ee ON ee.element = p.id
@@ -544,7 +544,7 @@ WITH RECURSIVE
         SELECT DISTINCT ON (a.id) a.root_id, a.node
         FROM aggregated a)
 SELECT dr.id                                     AS domain_resource,
-       COALESCE(JSONB_AGG(rn.node), '[]'::jsonb) AS modifier_extension
+       COALESCE(JSONB_AGG(rn.node), '[]'::JSONB) AS modifier_extension
 FROM domain_resource dr
          LEFT JOIN root_nodes rn
                    ON rn.root_id IN (SELECT extension FROM domain_resource_extension WHERE domain_resource = dr.id)

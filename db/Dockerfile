@@ -9,5 +9,6 @@ COPY patient-extension /tmp
 COPY patient.control /usr/local/share/postgresql/extension/
 
 RUN cat /tmp/views.sql \
-    /tmp/functions.sql \
+    /tmp/internal-functions.sql \
+    /tmp/public-functions.sql \
     /tmp/view-refresh.sql > /usr/local/share/postgresql/extension/patient--1.0.sql

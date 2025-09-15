@@ -107,18 +107,18 @@ VALUES -- patient 1 communication 1
 INSERT INTO human_name (id, use, text, family, given, prefix, suffix, period_start, period_end)
 VALUES -- patient 1 contact 1 human name 1
        ('00000000-0000-0000-0000-000000000005', 'OFFICIAL', 'Joséphine de Beauharnais', 'de Beauharnais',
-        ARRAY ['Joséphine'], ARRAY []::text[], ARRAY []::TEXT[], '2020-07-08T00:00Z', '2022-07-08T00:00Z'),
+        ARRAY ['Joséphine'], ARRAY []::TEXT[], ARRAY []::TEXT[], '2020-07-08T00:00Z', '2022-07-08T00:00Z'),
        -- patient 1 contact 1 human name 2
        ('00000000-0000-0000-0000-000000000006', 'OFFICIAL', 'Joséphine Bonaparte', 'Bonaparte', ARRAY ['Joséphine'],
         ARRAY ['Kaiserin der Franzosen'], ARRAY ['Raecherin der Enterbten'], '2022-07-08T00:00-01:00', NULL),
        -- patient 1 contact 2 human name 1
        ('00000000-0000-0000-0000-000000000007', 'OFFICIAL',
         'Maria Ludovica Leopoldina Franziska Therese Josepha Lucia, Erzherzogin von Österreich', NULL,
-        ARRAY ['Maria', 'Ludovica', 'Leopoldina', 'Franziska', 'Therese', 'Josepha', 'Lucia'], ARRAY []::text[],
+        ARRAY ['Maria', 'Ludovica', 'Leopoldina', 'Franziska', 'Therese', 'Josepha', 'Lucia'], ARRAY []::TEXT[],
         ARRAY ['Erzherzogin von Österreich'], '2021-01-01', '2021-08-07'),
        -- patient 1 human name
        ('00000000-0000-0000-0000-000000000008', 'OFFICIAL', 'Napoleon Bonaparte', 'Bonaparte', ARRAY ['Napoleon'],
-        ARRAY []::text[], ARRAY []::text[], '2000-05-04T12:34:56+02:00', NULL);
+        ARRAY []::TEXT[], ARRAY []::TEXT[], '2000-05-04T12:34:56+02:00', NULL);
 
 INSERT INTO identifier (id, use, type, system, value, period_start, period_end)
 VALUES ('00000000-0000-0000-0000-00000000000c', 'OFFICIAL', '00000000-0000-0000-0000-00000000000d',
@@ -155,8 +155,8 @@ INSERT INTO contact_contact_point (contact, contact_point)
 VALUES ('00000000-0000-0000-0000-00000000000e', '00000000-0000-0000-0000-000000000010'),
        ('00000000-0000-0000-0000-00000000000f', '00000000-0000-0000-0000-000000000010');
 
-INSERT INTO coding (id, system, uri, code, display, user_selected)
-VALUES ('00000000-0000-0000-0000-000000000016', 'https://example.com/coding/system', 'https://example.com/coding/1',
+INSERT INTO coding (id, system, code, display, user_selected)
+VALUES ('00000000-0000-0000-0000-000000000016', 'https://example.com/coding/system',
         'PUBLIC', 'Public Knowledge', FALSE);
 
 INSERT INTO codeable_concept_coding(codeable_concept, coding)
