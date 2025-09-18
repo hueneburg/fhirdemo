@@ -314,7 +314,7 @@ $$;
 CREATE TYPE SEARCH_OPERATOR AS ENUM ('AND', 'OR');
 
 CREATE OR REPLACE FUNCTION public.search_patients(search_data JSONB)
-    RETURNS UUID[]
+    RETURNS JSONB
     LANGUAGE plpgsql
 AS
 $$
@@ -322,55 +322,56 @@ DECLARE
     v_name      TEXT;
     v_birthdate TEXT;
     v_operator  SEARCH_OPERATOR;
-    uuids       UUID[];
+    v_last_id   UUID;
+    v_count     INTEGER;
+    result      JSONB;
 BEGIN
     SELECT search_data ->> 'name',
            search_data ->> 'birthdate',
+           (search_data ->> 'lastId')::UUID,
+           COALESCE((search_data ->> 'count')::INTEGER, 30),
            COALESCE((search_data ->> 'operator')::SEARCH_OPERATOR, 'AND'::SEARCH_OPERATOR)
-    INTO v_name, v_birthdate, v_operator;
+    INTO v_name, v_birthdate, v_last_id, v_count, v_operator;
 
-    IF v_birthdate IS NULL AND v_name IS NULL
-    THEN
-        RAISE EXCEPTION 'At least one of name or birthdate has to be set when searching';
-    ELSIF v_birthdate IS NULL THEN
-        SELECT ARRAY_AGG(pn.patient)
-        INTO uuids
-        FROM human_name hn
-                 LEFT JOIN patient_name pn ON pn.name = hn.id
-        WHERE hn.text LIKE '%' || v_name || '%';
-    ELSIF v_name IS NULL THEN
-        SELECT ARRAY_AGG(id)
-        INTO uuids
-        FROM patient
-        WHERE birthdate LIKE v_birthdate || '%';
-    ELSE
-        IF v_operator = 'OR' THEN
-            SELECT ARRAY_AGG(p.id)
-            INTO uuids
-            FROM patient p
-                     LEFT JOIN patient_name pn ON pn.patient = p.id
-                     LEFT JOIN human_name hn ON hn.id = pn.name
-            WHERE p.birthdate LIKE v_birthdate || '%'
-               OR hn.text LIKE '%' || v_name || '%';
-        ELSIF v_operator = 'AND' THEN
-            SELECT ARRAY_AGG(p.id)
-            INTO uuids
-            FROM patient p
-                     LEFT JOIN patient_name pn ON pn.patient = p.id
-                     LEFT JOIN human_name hn ON hn.id = pn.name
-            WHERE p.birthdate LIKE v_birthdate || '%'
-              AND hn.text LIKE '%' || v_name || '%';
-        END IF;
+    IF v_count > 100 THEN
+        v_count = 100;
     END IF;
-    RETURN COALESCE(uuids, ARRAY []::UUID[]);
-END;
-$$;
 
-CREATE OR REPLACE FUNCTION public.get_all_patients()
-    RETURNS UUID[]
-    LANGUAGE sql
-AS
-$$
-SELECT COALESCE(ARRAY_AGG(id), ARRAY [] ::UUID[])
-FROM patient;
+    WITH res AS (SELECT p.id, hn.text AS name, p.birthdate, hn.period_start, hn.period_end
+                 FROM patient p
+                          LEFT JOIN patient_name pn ON p.id = pn.patient
+                          LEFT JOIN human_name hn ON pn.name = hn.id
+                 WHERE (
+                     -- Neither birthdate nor name is set -> return all
+                     (v_birthdate IS NULL AND v_name IS NULL)
+                         OR
+                         -- case: only name
+                     (v_birthdate IS NULL AND v_name IS NOT NULL
+                         AND hn.text LIKE '%' || v_name || '%')
+                         OR
+                         -- case: only birthdate
+                     (v_name IS NULL AND v_birthdate IS NOT NULL
+                         AND p.birthdate LIKE v_birthdate || '%')
+                         OR
+                         -- case: both given, operator = OR
+                     (v_name IS NOT NULL AND v_birthdate IS NOT NULL AND v_operator = 'OR'
+                         AND (p.birthdate LIKE v_birthdate || '%' OR hn.text LIKE '%' || v_name || '%'))
+                         OR
+                         -- case: both given, operator = AND
+                     (v_name IS NOT NULL AND v_birthdate IS NOT NULL AND v_operator = 'AND'
+                         AND (p.birthdate LIKE v_birthdate || '%' AND hn.text LIKE '%' || v_name || '%'))
+                     )
+                   AND (hn.period_start IS NULL OR hn.period_start <= NOW())
+                   AND (hn.period_end IS NULL OR hn.period_end > NOW())
+                   AND (v_last_id IS NULL OR v_last_id < p.id)
+                 LIMIT v_count)
+    SELECT JSONB_AGG(JSONB_BUILD_OBJECT(
+            'id', id,
+            'name', name,
+            'birthdate', birthdate
+                     ))
+    INTO result
+    FROM res;
+    RETURN result;
+END;
 $$;
