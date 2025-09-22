@@ -1,9 +1,8 @@
 FROM rust:1.89.0-bullseye
 
-WORKDIR /usr/src/fhirdemo
+WORKDIR /usr/src/fhir
 COPY . .
 
 RUN cargo install --path .
 
-CMD ["target/release/FhirDemo"]
-
+CMD ["cargo", "run", "--release"]

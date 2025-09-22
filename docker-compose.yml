@@ -15,12 +15,14 @@ services:
     ports:
       - "6379:6379"
   server:
-    build:
-      context:
-        server
+    build: server
+    command: target/release/FhirDemo
     container_name: server
     ports:
       - "8080:8080"
+    depends_on:
+      - postgres
+      - cache
   app:
     build:
       context:
@@ -30,3 +32,5 @@ services:
       - "3000:3000"
     volumes:
       - ./server-logs:/opt/fhir/logs/
+    depends_on:
+      - server
