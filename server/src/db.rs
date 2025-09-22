@@ -4,6 +4,7 @@ pub mod db {
     use deadpool::managed::{Object, Pool};
     use deadpool_postgres::Manager;
     use tokio_postgres::NoTls;
+    use tracing::error;
     use uuid::Uuid;
 
     pub struct Db {
@@ -30,10 +31,15 @@ pub mod db {
             let mgr = Manager::from_config(config, NoTls, manager_config);
 
             // Setup connection pool
-            let pool = Pool::builder(mgr)
+            let pool = match Pool::builder(mgr)
                 .max_size(16)
-                .build()
-                .unwrap();
+                .build() {
+                Ok(pool) => pool,
+                Err(e) => {
+                    error!(?e, "Could not build a connection pool for DB");
+                    panic!("Could not build a connection pool for DB");
+                }
+            };
             Self { pool }
         }
 
@@ -43,35 +49,44 @@ pub mod db {
         /// Returns patient.id.
         pub async fn upsert_patient(&self,
                                     patient: &mut Patient,
-        ) -> Result<Uuid, String> {
-            let client = self.pool.get().await.unwrap();
-            let json = serde_json::to_value(patient).unwrap();
-            let row = client.query_one("SELECT fhir.upsert_patient($1);", &[&json]).await.unwrap();
+        ) -> Result<Uuid, Box<dyn std::error::Error>> {
+            let client = self.pool.get().await?;
+            let json = serde_json::to_value(patient)?;
+            let row = client.query_one("SELECT fhir.upsert_patient($1);", &[&json])
+                            .await?;
             return Ok(row.get(0));
         }
 
         /// Returns the patient with the ID.
-        pub async fn get_patient(&self, patient_id: Uuid) -> Result<Patient, String> {
-            let client = self.pool.get().await.unwrap();
-            let row = client.query_one("SELECT fhir.get_patient($1)", &[&patient_id]).await.unwrap();
+        pub async fn get_patient(
+            &self,
+            patient_id: Uuid,
+        ) -> Result<Patient, Box<dyn std::error::Error>> {
+            let client = self.pool.get().await?;
+            let row = client.query_one("SELECT fhir.get_patient($1)", &[&patient_id]).await?;
 
-            return Ok(serde_json::from_value(row.get(0)).unwrap());
+            return Ok(serde_json::from_value(row.get(0))?);
         }
 
         /// Creates a unique identifier across the DB that can be used for any kind of object.
-        pub async fn get_id(&self) -> String {
-            let client = self.pool.get().await.unwrap();
-            return client.query_one("SELECT fhir.get_uuid();", &[]).await.unwrap().get::<_, Uuid>(0).to_string();
+        pub async fn get_id(&self) -> Result<String, Box<dyn std::error::Error>> {
+            let client = self.pool.get().await?;
+            return Ok(
+                client.query_one("SELECT fhir.get_uuid();", &[])
+                      .await?
+                    .get::<_, Uuid>(0)
+                    .to_string());
         }
 
         /// Allows for searching patients.
         pub async fn search_patient(&self,
-                                    params: PatientSearch) -> Result<Json<Vec<PatientStub>>, String> {
-            let client = self.pool.get().await.unwrap();
+                                    params: PatientSearch,
+        ) -> Result<Json<Vec<PatientStub>>, Box<dyn std::error::Error>> {
+            let client = self.pool.get().await?;
             let row = client.query_one(
                 "SELECT fhir.search_patients($1);",
-                &[&serde_json::to_value(params).unwrap()]).await.unwrap();
-            return Ok(Json(serde_json::from_value(row.get(0)).unwrap()));
+                &[&serde_json::to_value(params)?]).await?;
+            return Ok(Json(serde_json::from_value(row.get(0))?));
         }
     }
 
@@ -82,6 +97,7 @@ pub mod db {
         use crate::model::model::HumanNameUse::Official;
         use crate::model::model::SearchOperator::{And, Or};
         use crate::model::model::*;
+        use crate::setid::SetId;
         use chrono::DateTime;
         use deadpool_postgres::GenericClient;
         use speculoos::assert_that;
@@ -91,7 +107,6 @@ pub mod db {
         use testcontainers::{ContainerAsync, GenericImage, ImageExt};
         use tokio::fs::read_to_string;
         use tokio_postgres::SimpleQueryMessage;
-        use crate::setid::SetId;
 
         struct TestDb {
             db: Db,
@@ -215,7 +230,7 @@ pub mod db {
             let g = &mut get_empty_patient();
 
             a.name = Vec::from([HumanName {
-                id: Some(db.get_id().await),
+                id: Some(db.get_id().await.unwrap()),
                 extension: Vec::new(),
                 period: None,
                 prefix: Vec::new(),
@@ -229,7 +244,7 @@ pub mod db {
             a.gender = Some(Female);
 
             b.name = Vec::from([HumanName {
-                id: Some(db.get_id().await),
+                id: Some(db.get_id().await.unwrap()),
                 extension: Vec::new(),
                 period: None,
                 prefix: Vec::new(),
@@ -243,7 +258,7 @@ pub mod db {
             b.gender = Some(Male);
 
             c.name = Vec::from([HumanName {
-                id: Some(db.get_id().await),
+                id: Some(db.get_id().await.unwrap()),
                 extension: Vec::new(),
                 period: None,
                 prefix: Vec::new(),
@@ -257,7 +272,7 @@ pub mod db {
             c.gender = Some(Female);
 
             d.name = Vec::from([HumanName {
-                id: Some(db.get_id().await),
+                id: Some(db.get_id().await.unwrap()),
                 extension: Vec::new(),
                 period: None,
                 prefix: Vec::new(),
@@ -271,7 +286,7 @@ pub mod db {
             d.gender = Some(Male);
 
             e.name = Vec::from([HumanName {
-                id: Some(db.get_id().await),
+                id: Some(db.get_id().await.unwrap()),
                 extension: Vec::new(),
                 period: None,
                 prefix: Vec::new(),
@@ -285,7 +300,7 @@ pub mod db {
             e.gender = Some(Female);
 
             f.name = Vec::from([HumanName {
-                id: Some(db.get_id().await),
+                id: Some(db.get_id().await.unwrap()),
                 extension: Vec::new(),
                 period: None,
                 prefix: Vec::new(),
@@ -299,7 +314,7 @@ pub mod db {
             f.gender = Some(Male);
 
             g.name = Vec::from([HumanName {
-                id: Some(db.get_id().await),
+                id: Some(db.get_id().await.unwrap()),
                 extension: Vec::new(),
                 period: None,
                 prefix: Vec::new(),
@@ -399,7 +414,7 @@ pub mod db {
             let g = &mut get_empty_patient();
 
             a.name = Vec::from([HumanName {
-                id: Some(db.get_id().await),
+                id: Some(db.get_id().await.unwrap()),
                 extension: Vec::new(),
                 period: None,
                 prefix: Vec::new(),
@@ -413,7 +428,7 @@ pub mod db {
             a.gender = Some(Female);
 
             b.name = Vec::from([HumanName {
-                id: Some(db.get_id().await),
+                id: Some(db.get_id().await.unwrap()),
                 extension: Vec::new(),
                 period: None,
                 prefix: Vec::new(),
@@ -427,7 +442,7 @@ pub mod db {
             b.gender = Some(Male);
 
             c.name = Vec::from([HumanName {
-                id: Some(db.get_id().await),
+                id: Some(db.get_id().await.unwrap()),
                 extension: Vec::new(),
                 period: None,
                 prefix: Vec::new(),
@@ -441,7 +456,7 @@ pub mod db {
             c.gender = Some(Female);
 
             d.name = Vec::from([HumanName {
-                id: Some(db.get_id().await),
+                id: Some(db.get_id().await.unwrap()),
                 extension: Vec::new(),
                 period: None,
                 prefix: Vec::new(),
@@ -455,7 +470,7 @@ pub mod db {
             d.gender = Some(Male);
 
             e.name = Vec::from([HumanName {
-                id: Some(db.get_id().await),
+                id: Some(db.get_id().await.unwrap()),
                 extension: Vec::new(),
                 period: None,
                 prefix: Vec::new(),
@@ -469,7 +484,7 @@ pub mod db {
             e.gender = Some(Female);
 
             f.name = Vec::from([HumanName {
-                id: Some(db.get_id().await),
+                id: Some(db.get_id().await.unwrap()),
                 extension: Vec::new(),
                 period: None,
                 prefix: Vec::new(),
@@ -483,7 +498,7 @@ pub mod db {
             f.gender = Some(Male);
 
             g.name = Vec::from([HumanName {
-                id: Some(db.get_id().await),
+                id: Some(db.get_id().await.unwrap()),
                 extension: Vec::new(),
                 period: None,
                 prefix: Vec::new(),
@@ -580,7 +595,7 @@ pub mod db {
             let mut uuids: Vec<String> = Vec::new();
 
             for _ in 1..10 {
-                uuids.push(db.get_id().await);
+                uuids.push(db.get_id().await.unwrap());
             }
 
             let to_be_res = client.simple_query("SELECT id FROM fhir.id_list;").await.unwrap();
@@ -1124,7 +1139,7 @@ pub mod db {
                 reference: None,
             });
 
-            patient.set_id(&db).await;
+            patient.set_id(&db).await.unwrap();
 
             let new_count = client.query_one("SELECT COUNT(1) FROM fhir.id_list;", &[]).await.unwrap().get::<usize, i64>(0);
 
@@ -1166,9 +1181,9 @@ pub mod db {
             return Patient {
                 id: None,
                 meta: Some(Meta {
-                    id: Some(db.get_id().await),
+                    id: Some(db.get_id().await.unwrap()),
                     extension: Vec::from([Extension {
-                        id: Some(db.get_id().await),
+                        id: Some(db.get_id().await.unwrap()),
                         extension: Vec::new(),
                         url: String::from("http://example.com/meta/extension/1"),
                         value_base_64_binary: None,
@@ -1176,7 +1191,7 @@ pub mod db {
                         value_string: None,
                         value_integer: None,
                     }, Extension {
-                        id: Some(db.get_id().await),
+                        id: Some(db.get_id().await.unwrap()),
                         extension: Vec::new(),
                         url: String::from("http://example.com/meta/extension/2"),
                         value_base_64_binary: None,
@@ -1188,9 +1203,9 @@ pub mod db {
                     profile: Vec::from(["http://example.com/meta/profile/1".to_string(),
                         "http://example.com/meta/profile/2".to_string()]),
                     security: Vec::from([Coding {
-                        id: Some(db.get_id().await),
+                        id: Some(db.get_id().await.unwrap()),
                         extension: Vec::from([Extension {
-                            id: Some(db.get_id().await),
+                            id: Some(db.get_id().await.unwrap()),
                             extension: Vec::new(),
                             url: String::from("http://example.com/meta/security/1/extension/1"),
                             value_base_64_binary: None,
@@ -1205,9 +1220,9 @@ pub mod db {
                         user_selected: Some(false),
                     }]),
                     tag: Vec::from([Coding {
-                        id: Some(db.get_id().await),
+                        id: Some(db.get_id().await.unwrap()),
                         extension: Vec::from([Extension {
-                            id: Some(db.get_id().await),
+                            id: Some(db.get_id().await.unwrap()),
                             extension: Vec::new(),
                             url: String::from("http://example.com/meta/security/2/extension/1"),
                             value_base_64_binary: Some("abc".to_string()),
@@ -1225,17 +1240,17 @@ pub mod db {
                 implicit_rules: Vec::from(["some implicit rule".to_string()]),
                 language: Some("en_US".to_string()),
                 text: Some(Narrative {
-                    id: Some(db.get_id().await),
+                    id: Some(db.get_id().await.unwrap()),
                     extension: Vec::new(),
                     status: NarrativeStatus::Generated,
                     div: "<p>Some div</p>".to_string(),
                 }),
                 contained: Vec::from([Resource {
-                    id: Some(db.get_id().await),
+                    id: Some(db.get_id().await.unwrap()),
                     meta: Some(Meta {
-                        id: Some(db.get_id().await),
+                        id: Some(db.get_id().await.unwrap()),
                         extension: Vec::from([Extension {
-                            id: Some(db.get_id().await),
+                            id: Some(db.get_id().await.unwrap()),
                             extension: Vec::new(),
                             url: String::from("http://example.com/meta/extension/1"),
                             value_base_64_binary: None,
@@ -1243,7 +1258,7 @@ pub mod db {
                             value_string: None,
                             value_integer: None,
                         }, Extension {
-                            id: Some(db.get_id().await),
+                            id: Some(db.get_id().await.unwrap()),
                             extension: Vec::new(),
                             url: String::from("http://example.com/meta/extension/2"),
                             value_base_64_binary: None,
@@ -1255,9 +1270,9 @@ pub mod db {
                         profile: Vec::from(["http://example.com/contained/1/meta/profile/1".to_string(),
                             "http://example.com/contained/1/meta/profile/2".to_string()]),
                         security: Vec::from([Coding {
-                            id: Some(db.get_id().await),
+                            id: Some(db.get_id().await.unwrap()),
                             extension: Vec::from([Extension {
-                                id: Some(db.get_id().await),
+                                id: Some(db.get_id().await.unwrap()),
                                 extension: Vec::new(),
                                 url: String::from("http://example.com/contained/1/meta/security/1/extension/1"),
                                 value_base_64_binary: None,
@@ -1272,9 +1287,9 @@ pub mod db {
                             user_selected: Some(false),
                         }]),
                         tag: Vec::from([Coding {
-                            id: Some(db.get_id().await),
+                            id: Some(db.get_id().await.unwrap()),
                             extension: Vec::from([Extension {
-                                id: Some(db.get_id().await),
+                                id: Some(db.get_id().await.unwrap()),
                                 extension: Vec::new(),
                                 url: String::from("http://example.com/contained/1/meta/security/2/extension/1"),
                                 value_base_64_binary: Some("abc".to_string()),
@@ -1293,7 +1308,7 @@ pub mod db {
                     language: Some("de_DE".to_string()),
                 }]),
                 extension: Vec::from([Extension {
-                    id: Some(db.get_id().await),
+                    id: Some(db.get_id().await.unwrap()),
                     extension: Vec::new(),
                     url: String::from("http://example.com/patient/extension/1"),
                     value_base_64_binary: Some("abcd".to_string()),
@@ -1302,7 +1317,7 @@ pub mod db {
                     value_integer: None,
                 }]),
                 modifier_extension: Vec::from([Extension {
-                    id: Some(db.get_id().await),
+                    id: Some(db.get_id().await.unwrap()),
                     extension: Vec::new(),
                     url: String::from("http://example.com/patient/modifier_extension/1"),
                     value_base_64_binary: Some("abcde".to_string()),
@@ -1311,17 +1326,17 @@ pub mod db {
                     value_integer: None,
                 }]),
                 identifier: Vec::from([Identifier {
-                    id: Some(db.get_id().await),
+                    id: Some(db.get_id().await.unwrap()),
                     extension: Vec::new(),
                     identifier_use: Some(IdentifierUse::Official),
                     identifier_type: Some(CodeableConcept {
-                        id: Some(db.get_id().await),
+                        id: Some(db.get_id().await.unwrap()),
                         extension: Vec::new(),
                         text: Some("Some text for identifier".to_string()),
                         coding: Vec::from([Coding {
-                            id: Some(db.get_id().await),
+                            id: Some(db.get_id().await.unwrap()),
                             extension: Vec::from([Extension {
-                                id: Some(db.get_id().await),
+                                id: Some(db.get_id().await.unwrap()),
                                 extension: Vec::new(),
                                 url: String::from("http://example.com/identifier/1/type"),
                                 value_base_64_binary: Some("zabc".to_string()),
@@ -1337,7 +1352,7 @@ pub mod db {
                         }]),
                     }),
                     assigner: Some(Box::new(Reference {
-                        id: Some(db.get_id().await),
+                        id: Some(db.get_id().await.unwrap()),
                         extension: Vec::new(),
                         reference: Some("some reference".to_string()),
                         ref_type: Some("organization".to_string()),
@@ -1353,7 +1368,7 @@ pub mod db {
                 }]),
                 active: Some(true),
                 name: Vec::from([HumanName {
-                    id: Some(db.get_id().await),
+                    id: Some(db.get_id().await.unwrap()),
                     extension: Vec::new(),
                     human_name_use: Some(HumanNameUse::Official),
                     text: Some("Sir Hand Willi Peterson der Weltenbummler".to_string()),
@@ -1366,7 +1381,7 @@ pub mod db {
                         end: Some("2015-07-08T00:00:00+02:00".to_string()),
                     }),
                 }, HumanName {
-                    id: Some(db.get_id().await),
+                    id: Some(db.get_id().await.unwrap()),
                     extension: Vec::new(),
                     human_name_use: Some(HumanNameUse::Official),
                     text: Some("Sir Hand Willi Peterson".to_string()),
@@ -1380,7 +1395,7 @@ pub mod db {
                     }),
                 }]),
                 telecom: Vec::from([ContactPoint {
-                    id: Some(db.get_id().await),
+                    id: Some(db.get_id().await.unwrap()),
                     extension: Vec::new(),
                     system: Some(ContactPointSystem::Email),
                     value: Some("my@email.com".to_string()),
@@ -1395,7 +1410,7 @@ pub mod db {
                     date_time: None,
                 }),
                 address: Some(Address {
-                    id: Some(db.get_id().await),
+                    id: Some(db.get_id().await.unwrap()),
                     extension: Vec::new(),
                     address_use: Some(AddressUse::Home),
                     address_type: Some(AddressType::Both),
@@ -1409,10 +1424,10 @@ pub mod db {
                     period: None,
                 }),
                 marital_status: Some(CodeableConcept {
-                    id: Some(db.get_id().await),
+                    id: Some(db.get_id().await.unwrap()),
                     extension: Vec::new(),
                     coding: Vec::from([Coding {
-                        id: Some(db.get_id().await),
+                        id: Some(db.get_id().await.unwrap()),
                         extension: Vec::new(),
                         system: Some("coding system".to_string()),
                         version: Some("1.1.0".to_string()),
@@ -1427,7 +1442,7 @@ pub mod db {
                     count: Some(3),
                 }),
                 photo: Vec::from([Attachment {
-                    id: Some(db.get_id().await),
+                    id: Some(db.get_id().await.unwrap()),
                     extension: Vec::new(),
                     content_type: Some("image/jpeg".to_string()),
                     language: Some("de-DE".to_string()),
@@ -1439,12 +1454,12 @@ pub mod db {
                     creation: DateTime::from_timestamp(1000, 0).map(|x| x.fixed_offset()),
                 }]),
                 contact: Vec::from([Contact {
-                    id: Some(db.get_id().await),
+                    id: Some(db.get_id().await.unwrap()),
                     extension: Vec::new(),
                     modifier_extension: Vec::new(),
                     relationship: Vec::new(),
                     name: Vec::from([HumanName {
-                        id: Some(db.get_id().await),
+                        id: Some(db.get_id().await.unwrap()),
                         extension: Vec::new(),
                         human_name_use: Some(Official),
                         text: Some("Hans Meier".to_string()),
@@ -1461,14 +1476,14 @@ pub mod db {
                     period: None,
                 }]),
                 communication: Vec::from([Communication {
-                    id: Some(db.get_id().await),
+                    id: Some(db.get_id().await.unwrap()),
                     extension: Vec::new(),
                     modifier_extension: Vec::new(),
                     language: "de-DE".to_string(),
                     preferred: Some(true),
                 }]),
                 general_practitioner: Vec::from([Reference {
-                    id: Some(db.get_id().await),
+                    id: Some(db.get_id().await.unwrap()),
                     extension: Vec::new(),
                     reference: Some("gp".to_string()),
                     ref_type: Some("gp ref type".to_string()),
@@ -1476,7 +1491,7 @@ pub mod db {
                     display: Some("Their GP".to_string()),
                 }]),
                 managing_organization: Some(Reference {
-                    id: Some(db.get_id().await),
+                    id: Some(db.get_id().await.unwrap()),
                     extension: Vec::new(),
                     reference: Some("managing_organization".to_string()),
                     ref_type: Some("managing_organization ref type".to_string()),
@@ -1485,7 +1500,7 @@ pub mod db {
                 }),
                 link: Vec::from([Link {
                     other: Reference {
-                        id: Some(db.get_id().await),
+                        id: Some(db.get_id().await.unwrap()),
                         extension: Vec::new(),
                         reference: Some("link".to_string()),
                         ref_type: Some("link ref type".to_string()),
