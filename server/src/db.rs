@@ -65,7 +65,7 @@ pub mod db {
             let client = self.pool.get().await?;
             let row = client.query_one("SELECT fhir.get_patient($1)", &[&patient_id]).await?;
 
-            return Ok(serde_json::from_value(row.get(0))?);
+            return Ok(serde_json::from_value(row.try_get(0)?)?);
         }
 
         /// Creates a unique identifier across the DB that can be used for any kind of object.

@@ -3,7 +3,7 @@ pub mod api {
     use crate::db::db::Db;
     use crate::model::model::{Patient, PatientSearch, PatientStub};
     use crate::setid::SetId;
-    use axum::extract::{Path, Query, State};
+    use axum::extract::{ConnectInfo, Path, Query, State};
     use axum::http::StatusCode;
     use axum::middleware::{from_fn, from_fn_with_state, Next};
     use axum::routing::{get, put};
@@ -11,9 +11,10 @@ pub mod api {
     use axum_core::body::Body;
     use axum_core::extract::Request;
     use axum_core::response::Response;
+    use std::net::SocketAddr;
     use std::str::FromStr;
     use std::sync::Arc;
-    use tracing::error;
+    use tracing::{error, info_span, Instrument};
     use uuid::Uuid;
 
     const UPSERT_PATIENT_PATH: &'static str = "/fhir/patient";
@@ -31,6 +32,7 @@ pub mod api {
                 .route(SEARCH_PATIENTS_PATH, get(Api::search_patient))
                 .route_layer(from_fn_with_state(cache, Api::get_patient_cache_layer))
                 .route(GET_PATIENT_PATH, get(Api::get_patient))
+                .layer(from_fn(tracing_middleware))
                 .layer(Extension(db));
             Self { app }
         }
@@ -80,5 +82,33 @@ pub mod api {
                      .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
                      .map(Json);
         }
+    }
+
+    async fn tracing_middleware(ConnectInfo(remote): ConnectInfo<SocketAddr>,
+                                req: Request<Body>,
+                                next: Next) -> Response {
+        let request_id = Uuid::new_v4();
+        let method = req.method().clone();
+        let uri = req.uri().clone();
+
+        let ip = match remote {
+            SocketAddr::V4(v4) => {
+                let octets = v4.ip().octets();
+                // zero the last octet
+                format!("{}.{}.{}.0", octets[0], octets[1], octets[2])
+            }
+            SocketAddr::V6(v6) => {
+                let segments = v6.ip().segments();
+                // zero the last segment
+                format!(
+                    "{:x}:{:x}:{:x}:{:x}:{:x}:{:x}:{:x}:0",
+                    segments[0], segments[1], segments[2], segments[3],
+                    segments[4], segments[5], segments[6]
+                )
+            }
+        };
+
+        let span = info_span!("request", %request_id, %method, %uri, %ip);
+        return next.run(req).instrument(span).await;
     }
 }
