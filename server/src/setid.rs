@@ -1,17 +1,33 @@
 use crate::db::db::Db;
-use crate::model::model::{Address, Attachment, CodeableConcept, Coding, Communication, Contact, ContactPoint, Extension, HumanName, Identifier, Meta, Narrative, Patient, Reference, Resource};
+use crate::model::model::{
+    Address,
+    Attachment,
+    CodeableConcept,
+    Coding,
+    Communication,
+    Contact,
+    ContactPoint,
+    Extension,
+    HumanName,
+    Identifier,
+    Meta,
+    Narrative,
+    Patient,
+    Reference,
+    Resource,
+};
 use futures::future::BoxFuture;
 use futures::FutureExt;
 
 pub trait SetId {
     fn set_id<'a>(&'a mut self,
-                        db: &'a Db,
+                  db: &'a Db,
     ) -> BoxFuture<'a, Result<(), Box<dyn std::error::Error>>>;
 }
 
 impl SetId for Patient {
     fn set_id<'a>(&'a mut self,
-                        db: &'a Db,
+                  db: &'a Db,
     ) -> BoxFuture<'a, Result<(), Box<dyn std::error::Error>>> {
         return async move {
             if self.id == None {
@@ -69,7 +85,7 @@ impl SetId for Patient {
 
 impl SetId for Meta {
     fn set_id<'a>(&'a mut self,
-                        db: &'a Db,
+                  db: &'a Db,
     ) -> BoxFuture<'a, Result<(), Box<dyn std::error::Error>>> {
         return async move {
             if self.id == None {
@@ -91,7 +107,7 @@ impl SetId for Meta {
 
 impl SetId for Narrative {
     fn set_id<'a>(&'a mut self,
-                        db: &'a Db,
+                  db: &'a Db,
     ) -> BoxFuture<'a, Result<(), Box<dyn std::error::Error>>> {
         return async move {
             if self.id == None {
@@ -107,7 +123,7 @@ impl SetId for Narrative {
 
 impl SetId for Resource {
     fn set_id<'a>(&'a mut self,
-                        db: &'a Db,
+                  db: &'a Db,
     ) -> BoxFuture<'a, Result<(), Box<dyn std::error::Error>>> {
         return async move {
             if self.id == None {
@@ -123,7 +139,7 @@ impl SetId for Resource {
 
 impl SetId for HumanName {
     fn set_id<'a>(&'a mut self,
-                        db: &'a Db,
+                  db: &'a Db,
     ) -> BoxFuture<'a, Result<(), Box<dyn std::error::Error>>> {
         return async move {
             if self.id == None {
@@ -139,7 +155,7 @@ impl SetId for HumanName {
 
 impl SetId for ContactPoint {
     fn set_id<'a>(&'a mut self,
-                        db: &'a Db,
+                  db: &'a Db,
     ) -> BoxFuture<'a, Result<(), Box<dyn std::error::Error>>> {
         return async move {
             if self.id == None {
@@ -155,7 +171,7 @@ impl SetId for ContactPoint {
 
 impl SetId for Address {
     fn set_id<'a>(&'a mut self,
-                        db: &'a Db,
+                  db: &'a Db,
     ) -> BoxFuture<'a, Result<(), Box<dyn std::error::Error>>> {
         return async move {
             if self.id == None {
@@ -171,7 +187,7 @@ impl SetId for Address {
 
 impl SetId for Attachment {
     fn set_id<'a>(&'a mut self,
-                        db: &'a Db,
+                  db: &'a Db,
     ) -> BoxFuture<'a, Result<(), Box<dyn std::error::Error>>> {
         return async move {
             if self.id == None {
@@ -187,7 +203,7 @@ impl SetId for Attachment {
 
 impl SetId for Contact {
     fn set_id<'a>(&'a mut self,
-                        db: &'a Db,
+                  db: &'a Db,
     ) -> BoxFuture<'a, Result<(), Box<dyn std::error::Error>>> {
         return async move {
             if self.id == None {
@@ -221,7 +237,7 @@ impl SetId for Contact {
 
 impl SetId for Communication {
     fn set_id<'a>(&'a mut self,
-                        db: &'a Db,
+                  db: &'a Db,
     ) -> BoxFuture<'a, Result<(), Box<dyn std::error::Error>>> {
         return async move {
             if self.id == None {
@@ -240,7 +256,7 @@ impl SetId for Communication {
 
 impl SetId for Extension {
     fn set_id<'a>(&'a mut self,
-                        db: &'a Db,
+                  db: &'a Db,
     ) -> BoxFuture<'a, Result<(), Box<dyn std::error::Error>>> {
         return async move {
             if self.id == None {
@@ -256,7 +272,7 @@ impl SetId for Extension {
 
 impl SetId for Coding {
     fn set_id<'a>(&'a mut self,
-                        db: &'a Db,
+                  db: &'a Db,
     ) -> BoxFuture<'a, Result<(), Box<dyn std::error::Error>>> {
         return async move {
             if self.id == None {
@@ -272,7 +288,7 @@ impl SetId for Coding {
 
 impl SetId for CodeableConcept {
     fn set_id<'a>(&'a mut self,
-                        db: &'a Db,
+                  db: &'a Db,
     ) -> BoxFuture<'a, Result<(), Box<dyn std::error::Error>>> {
         return async move {
             if self.id == None {
@@ -291,7 +307,7 @@ impl SetId for CodeableConcept {
 
 impl SetId for Identifier {
     fn set_id<'a>(&'a mut self,
-                        db: &'a Db,
+                  db: &'a Db,
     ) -> BoxFuture<'a, Result<(), Box<dyn std::error::Error>>> {
         return async move {
             if self.id == None {
@@ -313,7 +329,7 @@ impl SetId for Identifier {
 
 impl SetId for Reference {
     fn set_id<'a>(&'a mut self,
-                        db: &'a Db,
+                  db: &'a Db,
     ) -> BoxFuture<'a, Result<(), Box<dyn std::error::Error>>> {
         return async move {
             if self.id == None {

@@ -117,8 +117,12 @@ pub mod db {
         async fn setup() -> TestDb {
             let image = GenericImage::new("postgres", "17.6-alpine3.22")
                 .with_exposed_port(5432.tcp())
-                .with_wait_for(WaitFor::message_on_stdout("PostgreSQL init process complete; ready for start up."))
-                .with_wait_for(WaitFor::message_on_stdout("database system is ready to accept connections"))
+                .with_wait_for(
+                    WaitFor::message_on_stdout(
+                        "PostgreSQL init process complete; ready for start up."))
+                .with_wait_for(
+                    WaitFor::message_on_stdout(
+                        "database system is ready to accept connections"))
                 // Wait 5 seconds for it to start because for some reason,
                 // it cannot connect otherwise.
                 .with_wait_for(WaitFor::seconds(5))
@@ -617,7 +621,10 @@ pub mod db {
             let db = test_db.db;
             let client = db.pool.get().await.unwrap();
 
-            let id_count: i64 = client.query_one("SELECT COUNT(1) FROM fhir.id_list", &[]).await.unwrap().get(0);
+            let id_count: i64 = client.query_one("SELECT COUNT(1) FROM fhir.id_list", &[])
+                                      .await
+                                      .unwrap()
+                                      .get(0);
 
             let mut patient = get_empty_patient();
 
@@ -1141,7 +1148,10 @@ pub mod db {
 
             patient.set_id(&db).await.unwrap();
 
-            let new_count = client.query_one("SELECT COUNT(1) FROM fhir.id_list;", &[]).await.unwrap().get::<usize, i64>(0);
+            let new_count = client.query_one("SELECT COUNT(1) FROM fhir.id_list;", &[])
+                                  .await
+                                  .unwrap()
+                                  .get::<usize, i64>(0);
 
             assert_that(&new_count).is_equal_to(id_count + 63);
         }
@@ -1185,7 +1195,7 @@ pub mod db {
                     extension: Vec::from([Extension {
                         id: Some(db.get_id().await.unwrap()),
                         extension: Vec::new(),
-                        url: String::from("http://example.com/meta/extension/1"),
+                        url: "http://example.com/meta/extension/1".to_string(),
                         value_base_64_binary: None,
                         value_boolean: Some(true),
                         value_string: None,
@@ -1193,7 +1203,7 @@ pub mod db {
                     }, Extension {
                         id: Some(db.get_id().await.unwrap()),
                         extension: Vec::new(),
-                        url: String::from("http://example.com/meta/extension/2"),
+                        url: "http://example.com/meta/extension/2".to_string(),
                         value_base_64_binary: None,
                         value_boolean: None,
                         value_string: None,
@@ -1207,7 +1217,7 @@ pub mod db {
                         extension: Vec::from([Extension {
                             id: Some(db.get_id().await.unwrap()),
                             extension: Vec::new(),
-                            url: String::from("http://example.com/meta/security/1/extension/1"),
+                            url: "http://example.com/meta/security/1/extension/1".to_string(),
                             value_base_64_binary: None,
                             value_boolean: None,
                             value_string: Some("Some value".to_string()),
@@ -1224,7 +1234,7 @@ pub mod db {
                         extension: Vec::from([Extension {
                             id: Some(db.get_id().await.unwrap()),
                             extension: Vec::new(),
-                            url: String::from("http://example.com/meta/security/2/extension/1"),
+                            url: "http://example.com/meta/security/2/extension/1".to_string(),
                             value_base_64_binary: Some("abc".to_string()),
                             value_boolean: None,
                             value_string: None,
@@ -1252,7 +1262,7 @@ pub mod db {
                         extension: Vec::from([Extension {
                             id: Some(db.get_id().await.unwrap()),
                             extension: Vec::new(),
-                            url: String::from("http://example.com/meta/extension/1"),
+                            url: "http://example.com/meta/extension/1".to_string(),
                             value_base_64_binary: None,
                             value_boolean: Some(true),
                             value_string: None,
@@ -1260,27 +1270,32 @@ pub mod db {
                         }, Extension {
                             id: Some(db.get_id().await.unwrap()),
                             extension: Vec::new(),
-                            url: String::from("http://example.com/meta/extension/2"),
+                            url: "http://example.com/meta/extension/2".to_string(),
                             value_base_64_binary: None,
                             value_boolean: None,
                             value_string: None,
                             value_integer: Some(42),
                         }]),
                         source: Some("http://example.com/meta/source".to_string()),
-                        profile: Vec::from(["http://example.com/contained/1/meta/profile/1".to_string(),
-                            "http://example.com/contained/1/meta/profile/2".to_string()]),
+                        profile: Vec::from([
+                            "http://example.com/contained/1/meta/profile/1".to_string(),
+                            "http://example.com/contained/1/meta/profile/2".to_string()
+                        ]),
                         security: Vec::from([Coding {
                             id: Some(db.get_id().await.unwrap()),
                             extension: Vec::from([Extension {
                                 id: Some(db.get_id().await.unwrap()),
                                 extension: Vec::new(),
-                                url: String::from("http://example.com/contained/1/meta/security/1/extension/1"),
+                                url: "http://example.com/contained/1/meta/security/1/extension/1"
+                                    .to_string(),
                                 value_base_64_binary: None,
                                 value_boolean: None,
                                 value_string: Some("Some value".to_string()),
                                 value_integer: None,
                             }]),
-                            system: Some("http://example.com/contained/1/meta/security/1/system".to_string()),
+                            system: Some(
+                                "http://example.com/contained/1/meta/security/1/system".to_string()
+                            ),
                             version: Some("1.0.0".to_string()),
                             code: Some("some code".to_string()),
                             display: Some("some display".to_string()),
@@ -1291,7 +1306,8 @@ pub mod db {
                             extension: Vec::from([Extension {
                                 id: Some(db.get_id().await.unwrap()),
                                 extension: Vec::new(),
-                                url: String::from("http://example.com/contained/1/meta/security/2/extension/1"),
+                                url: "http://example.com/contained/1/meta/security/2/extension/1"
+                                    .to_string(),
                                 value_base_64_binary: Some("abc".to_string()),
                                 value_boolean: None,
                                 value_string: None,
@@ -1310,7 +1326,7 @@ pub mod db {
                 extension: Vec::from([Extension {
                     id: Some(db.get_id().await.unwrap()),
                     extension: Vec::new(),
-                    url: String::from("http://example.com/patient/extension/1"),
+                    url: "http://example.com/patient/extension/1".to_string(),
                     value_base_64_binary: Some("abcd".to_string()),
                     value_boolean: None,
                     value_string: None,
@@ -1319,7 +1335,7 @@ pub mod db {
                 modifier_extension: Vec::from([Extension {
                     id: Some(db.get_id().await.unwrap()),
                     extension: Vec::new(),
-                    url: String::from("http://example.com/patient/modifier_extension/1"),
+                    url: "http://example.com/patient/modifier_extension/1".to_string(),
                     value_base_64_binary: Some("abcde".to_string()),
                     value_boolean: None,
                     value_string: None,
@@ -1338,7 +1354,7 @@ pub mod db {
                             extension: Vec::from([Extension {
                                 id: Some(db.get_id().await.unwrap()),
                                 extension: Vec::new(),
-                                url: String::from("http://example.com/identifier/1/type"),
+                                url: "http://example.com/identifier/1/type".to_string(),
                                 value_base_64_binary: Some("zabc".to_string()),
                                 value_boolean: None,
                                 value_string: None,
@@ -1415,7 +1431,11 @@ pub mod db {
                     address_use: Some(AddressUse::Home),
                     address_type: Some(AddressType::Both),
                     text: Some("Musterstr. 1\n12345 Musterstadt\nGERMANY".to_string()),
-                    line: Vec::from(["Musterstr. 1".to_string(), "12345 Musterstadt".to_string(), "GERMANY".to_string()]),
+                    line: Vec::from([
+                        "Musterstr. 1".to_string(),
+                        "12345 Musterstadt".to_string(),
+                        "GERMANY".to_string()
+                    ]),
                     city: Some("Musterstadt".to_string()),
                     district: None,
                     state: None,

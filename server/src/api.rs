@@ -1,4 +1,5 @@
 pub mod api {
+    use crate::auth::auth::Auth;
     use crate::cache::cache::Cache;
     use crate::db::db::Db;
     use crate::model::model::{Patient, PatientSearch, PatientStub};
@@ -27,12 +28,14 @@ pub mod api {
 
     impl Api {
         pub fn new(db: Arc<Db>, cache: Cache) -> Self {
+            let auth = Auth::new();
             let app = Router::new()
                 .route(UPSERT_PATIENT_PATH, put(Api::upsert_patient))
                 .route(SEARCH_PATIENTS_PATH, get(Api::search_patient))
                 .route_layer(from_fn_with_state(cache, Api::get_patient_cache_layer))
                 .route(GET_PATIENT_PATH, get(Api::get_patient))
                 .layer(from_fn(tracing_middleware))
+                .layer(from_fn_with_state(auth, Auth::auth_middleware))
                 .layer(Extension(db));
             Self { app }
         }

@@ -8,6 +8,7 @@ mod api;
 mod db;
 mod cache;
 mod setid;
+mod auth;
 
 use crate::api::api::Api;
 use crate::cache::cache::Cache;

@@ -27,7 +27,11 @@ pub mod cache {
             return Self { pool };
         }
 
-        pub async fn get_patient_caching_layer(&self, req: Request<Body>, next: Next) -> Response<Body> {
+        pub async fn get_patient_caching_layer(
+            &self,
+            req: Request<Body>,
+            next: Next
+        ) -> Response<Body> {
             let id = match req.extensions().get::<Path<Uuid>>() {
                 Some(Path(id)) => *id, // copy the UUID
                 None => {
