@@ -143,9 +143,10 @@ BEGIN
                      AND (pn.period_end IS NULL OR pn.period_end > NOW())
                      -- pagination
                      AND (v_iteration_key IS NULL
-                       OR v_iteration_key <= p.created_at)
-                     AND (v_last_id IS NULL
-                       OR v_last_id < p.id)
+                       OR v_iteration_key < p.created_at
+                       OR (v_iteration_key = p.created_at
+                           AND (v_last_id IS NULL
+                               OR v_last_id < p.id)))
                    GROUP BY p.id, p.created_at
                    ORDER BY p.created_at, p.id
                    LIMIT v_count)
@@ -186,9 +187,10 @@ BEGIN
                      AND (pn.period_end IS NULL OR pn.period_end > NOW())
                      -- pagination
                      AND (v_iteration_key IS NULL
-                       OR v_iteration_key <= p.created_at)
-                     AND (v_last_id IS NULL
-                       OR v_last_id < p.id)
+                       OR v_iteration_key < p.created_at
+                       OR (v_iteration_key = p.created_at
+                           AND (v_last_id IS NULL
+                               OR v_last_id < p.id)))
                    GROUP BY p.id, p.created_at
                    ORDER BY p.created_at, p.id
                    LIMIT v_count)

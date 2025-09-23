@@ -5,7 +5,6 @@ pub mod model {
     use std::error::Error;
     use std::fmt::Debug;
     use tokio_postgres::types::{FromSql, Type};
-    use uuid::Uuid;
 
     fn default_count() -> u32 { 30 }
     fn default_vec<T>() -> Vec<T> { Vec::new() }

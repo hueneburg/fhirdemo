@@ -397,8 +397,8 @@ pub mod db {
                     gender: None,
                     operator: And,
                     count: 3,
-                    iteration_key: Some(page1_name.last().unwrap().id.clone()),
-                    last_id: None,
+                    iteration_key: Some(page1_name.last().unwrap().iteration_key.clone()),
+                    last_id: Some(page1_name.last().unwrap().id.clone()),
                 }
             ).await.unwrap();
             assert_that(&(page1_name.len())).is_equal_to(3);
@@ -586,8 +586,8 @@ pub mod db {
                     gender: None,
                     operator: Or,
                     count: 3,
-                    iteration_key: Some(page1_name.last().unwrap().id.clone()),
-                    last_id: None,
+                    iteration_key: Some(page1_name.last().unwrap().iteration_key.clone()),
+                    last_id: Some(page1_name.last().unwrap().id.clone()),
                 }
             ).await.unwrap();
             assert_that(&(page1_name.len())).is_equal_to(3);
