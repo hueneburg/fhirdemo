@@ -3,7 +3,7 @@ import type {SearchOperator} from "@/models/search-operator.ts";
 import type {Gender, Patient, PatientStub, SearchParams} from "@/models/fhir.ts";
 
 const client = axios.create({
-    baseURL: 'http://server:8080/fhir/',
+    baseURL: 'http://127.0.0.1:8080/fhir/',
     headers: {
         'Content-Type': 'application/json',
         'Authorization': 'mywrite'
