@@ -386,6 +386,7 @@ pub mod db {
                     operator: And,
                     count: 3,
                     iteration_key: None,
+                    last_id: None,
                 }
             ).await.unwrap();
             let page2_name = db.search_patient(
@@ -397,6 +398,7 @@ pub mod db {
                     operator: And,
                     count: 3,
                     iteration_key: Some(page1_name.last().unwrap().id.clone()),
+                    last_id: None,
                 }
             ).await.unwrap();
             assert_that(&(page1_name.len())).is_equal_to(3);
@@ -411,6 +413,7 @@ pub mod db {
                     operator: And,
                     count: 100,
                     iteration_key: None,
+                    last_id: None,
                 }
             ).await.unwrap();
             assert_that(&(page_bday.len())).is_equal_to(4);
@@ -424,6 +427,7 @@ pub mod db {
                     operator: And,
                     count: 100,
                     iteration_key: None,
+                    last_id: None,
                 }
             ).await.unwrap();
             assert_that(&(page_gender.len())).is_equal_to(4);
@@ -437,6 +441,7 @@ pub mod db {
                     operator: And,
                     count: 100,
                     iteration_key: None,
+                    last_id: None,
                 }
             ).await.unwrap();
             assert_that(&(page_and.len())).is_equal_to(2);
@@ -570,6 +575,7 @@ pub mod db {
                     operator: Or,
                     count: 3,
                     iteration_key: None,
+                    last_id: None,
                 }
             ).await.unwrap();
             let page2_name = db.search_patient(
@@ -581,6 +587,7 @@ pub mod db {
                     operator: Or,
                     count: 3,
                     iteration_key: Some(page1_name.last().unwrap().id.clone()),
+                    last_id: None,
                 }
             ).await.unwrap();
             assert_that(&(page1_name.len())).is_equal_to(3);
@@ -595,6 +602,7 @@ pub mod db {
                     operator: Or,
                     count: 100,
                     iteration_key: None,
+                    last_id: None,
                 }
             ).await.unwrap();
             assert_that(&(page_bday.len())).is_equal_to(4);
@@ -608,6 +616,7 @@ pub mod db {
                     operator: Or,
                     count: 100,
                     iteration_key: None,
+                    last_id: None,
                 }
             ).await.unwrap();
             assert_that(&(page_gender.len())).is_equal_to(4);
@@ -621,6 +630,7 @@ pub mod db {
                     operator: Or,
                     count: 100,
                     iteration_key: None,
+                    last_id: None,
                 }
             ).await.unwrap();
             assert_that(&(page_or.len())).is_equal_to(6);
