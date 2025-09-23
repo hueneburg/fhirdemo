@@ -6,6 +6,7 @@ pub mod auth {
     use axum_core::response::Response;
     use http::{HeaderValue, StatusCode};
     use std::env;
+    use tracing::error;
 
     #[derive(Clone)]
     pub struct Auth {
@@ -36,6 +37,7 @@ pub mod auth {
                                                .map(HeaderValue::to_str) {
                 if req.method() == http::Method::POST || req.method() == http::Method::PUT {
                     if token == auth.write_token {
+                        error!("Running after auth 1");
                         next.run(req).await
                     } else {
                         Response::builder().status(StatusCode::UNAUTHORIZED)
@@ -45,6 +47,7 @@ pub mod auth {
                 } else {
                     // read API
                     if token == auth.read_token || token == auth.write_token {
+                        error!("Running after auth 2");
                         next.run(req).await
                     } else {
                         Response::builder().status(StatusCode::UNAUTHORIZED)

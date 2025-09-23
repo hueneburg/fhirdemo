@@ -1,12 +1,15 @@
 pub mod cache {
+    use crate::api::api::GET_PATIENT_PATH;
     use axum::body::Body;
-    use axum::extract::Path;
+    use axum::extract::MatchedPath;
     use axum::middleware::Next;
     use axum::response::Response;
     use axum_core::extract::Request;
     use deadpool::Runtime;
     use deadpool_redis::redis::AsyncTypedCommands;
+    use http::StatusCode;
     use http_body_util::BodyExt;
+    use std::str::FromStr;
     use tracing::error;
     use uuid::Uuid;
 
@@ -30,13 +33,31 @@ pub mod cache {
         pub async fn get_patient_caching_layer(
             &self,
             req: Request<Body>,
-            next: Next
+            next: Next,
         ) -> Response<Body> {
-            let id = match req.extensions().get::<Path<Uuid>>() {
-                Some(Path(id)) => *id, // copy the UUID
+            if req.method() != http::Method::GET
+                || req.extensions().get::<MatchedPath>().unwrap().as_str() != GET_PATIENT_PATH {
+                error!("Next because not get & get patient");
+                return next.run(req).await;
+            }
+
+            let s = match req.uri().path().split('/').last() {
+                Some(path_var) => path_var,
                 None => {
-                    error!("Could not extract id path");
-                    return Response::builder().status(500).body(Body::empty()).unwrap();
+                    error!("No ID to extract");
+                    return Response::builder().status(StatusCode::BAD_REQUEST)
+                                              .body(Body::empty())
+                                              .unwrap();
+                }
+            };
+
+            let id = match Uuid::from_str(s) {
+                Ok(id) => id,
+                Err(e) => {
+                    error!(?e, "Could not parse UUID in path.");
+                    return Response::builder().status(StatusCode::BAD_REQUEST)
+                                              .body(Body::empty())
+                                              .unwrap();
                 }
             };
             let mut client = match self.pool.get().await {
@@ -70,7 +91,7 @@ pub mod cache {
 
                         let _ = client.set_ex::<>(
                             &id.to_string(),
-                            String::from_utf8_lossy(&body_bytes.to_vec()),
+                            &body_bytes.to_vec(),
                             300,
                         ).await;
 

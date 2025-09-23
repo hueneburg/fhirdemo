@@ -3,6 +3,9 @@ pub mod db {
     use axum::Json;
     use deadpool::managed::{Object, Pool};
     use deadpool_postgres::Manager;
+    use serde_json::Value;
+    use std::error::Error;
+    use std::fmt::{Display, Formatter};
     use tokio_postgres::NoTls;
     use tracing::error;
     use uuid::Uuid;
@@ -10,6 +13,19 @@ pub mod db {
     pub struct Db {
         pool: Pool<Manager, Object<Manager>>,
     }
+
+    #[derive(Debug)]
+    pub struct NotFound {
+        id: Uuid,
+    }
+
+    impl Display for NotFound {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            return f.write_str(format!("NotFound {{ id={} }}", self.id.to_string()).as_str());
+        }
+    }
+
+    impl Error for NotFound {}
 
     impl Db {
         pub fn create_connection(dbname: &str,
@@ -49,7 +65,7 @@ pub mod db {
         /// Returns patient.id.
         pub async fn upsert_patient(&self,
                                     patient: &mut Patient,
-        ) -> Result<Uuid, Box<dyn std::error::Error>> {
+        ) -> Result<Uuid, Box<dyn Error>> {
             let client = self.pool.get().await?;
             let json = serde_json::to_value(patient)?;
             let row = client.query_one("SELECT fhir.upsert_patient($1);", &[&json])
@@ -61,15 +77,25 @@ pub mod db {
         pub async fn get_patient(
             &self,
             patient_id: Uuid,
-        ) -> Result<Patient, Box<dyn std::error::Error>> {
-            let client = self.pool.get().await?;
+        ) -> Result<Patient, Box<dyn Error>> {
+            let client = match self.pool.get().await {
+                Ok(client) => client,
+                Err(error) => {
+                    error!(?error, "Could not open connection to Postgres pool");
+                    return Err(error.into());
+                }
+            };
             let row = client.query_one("SELECT fhir.get_patient($1)", &[&patient_id]).await?;
 
-            return Ok(serde_json::from_value(row.try_get(0)?)?);
+            return if let Some(res) = row.get(0) {
+                Ok(serde_json::from_value(res)?)
+            } else {
+                Err(Box::new(NotFound { id: patient_id.clone() }))
+            };
         }
 
         /// Creates a unique identifier across the DB that can be used for any kind of object.
-        pub async fn get_id(&self) -> Result<String, Box<dyn std::error::Error>> {
+        pub async fn get_id(&self) -> Result<String, Box<dyn Error>> {
             let client = self.pool.get().await?;
             return Ok(
                 client.query_one("SELECT fhir.get_uuid();", &[])
@@ -81,12 +107,24 @@ pub mod db {
         /// Allows for searching patients.
         pub async fn search_patient(&self,
                                     params: PatientSearch,
-        ) -> Result<Json<Vec<PatientStub>>, Box<dyn std::error::Error>> {
+        ) -> Result<Json<Vec<PatientStub>>, Box<dyn Error>> {
             let client = self.pool.get().await?;
+            error!(?params, "Search query");
             let row = client.query_one(
                 "SELECT fhir.search_patients($1);",
                 &[&serde_json::to_value(params)?]).await?;
-            return Ok(Json(serde_json::from_value(row.get(0))?));
+            error!(?row, "DB Response");
+            let r = row.get(0);
+            error!(?r, "Got a response");
+            let patients = match r {
+                Value::String(s) => serde_json::from_str::<Vec<PatientStub>>(s.as_str())?,
+                Value::Array(_) => serde_json::from_value::<Vec<PatientStub>>(r).unwrap(),
+                v => return Err(format!("Unknown JSON type: {}", v).into())
+            };
+            error!(?patients, "Got patients");
+            let json = Json(patients);
+            error!(?json, "Parsed json");
+            return Ok(json);
         }
     }
 
@@ -347,7 +385,7 @@ pub mod db {
                     gender: None,
                     operator: And,
                     count: 3,
-                    last_id: None,
+                    iteration_key: None,
                 }
             ).await.unwrap();
             let page2_name = db.search_patient(
@@ -358,7 +396,7 @@ pub mod db {
                     gender: None,
                     operator: And,
                     count: 3,
-                    last_id: page1_name.last().unwrap().id.clone(),
+                    iteration_key: Some(page1_name.last().unwrap().id.clone()),
                 }
             ).await.unwrap();
             assert_that(&(page1_name.len())).is_equal_to(3);
@@ -372,7 +410,7 @@ pub mod db {
                     gender: None,
                     operator: And,
                     count: 100,
-                    last_id: None,
+                    iteration_key: None,
                 }
             ).await.unwrap();
             assert_that(&(page_bday.len())).is_equal_to(4);
@@ -385,7 +423,7 @@ pub mod db {
                     gender: Some(Female),
                     operator: And,
                     count: 100,
-                    last_id: None,
+                    iteration_key: None,
                 }
             ).await.unwrap();
             assert_that(&(page_gender.len())).is_equal_to(4);
@@ -398,7 +436,7 @@ pub mod db {
                     gender: Some(Female),
                     operator: And,
                     count: 100,
-                    last_id: None,
+                    iteration_key: None,
                 }
             ).await.unwrap();
             assert_that(&(page_and.len())).is_equal_to(2);
@@ -531,7 +569,7 @@ pub mod db {
                     gender: None,
                     operator: Or,
                     count: 3,
-                    last_id: None,
+                    iteration_key: None,
                 }
             ).await.unwrap();
             let page2_name = db.search_patient(
@@ -542,7 +580,7 @@ pub mod db {
                     gender: None,
                     operator: Or,
                     count: 3,
-                    last_id: page1_name.last().unwrap().id.clone(),
+                    iteration_key: Some(page1_name.last().unwrap().id.clone()),
                 }
             ).await.unwrap();
             assert_that(&(page1_name.len())).is_equal_to(3);
@@ -556,7 +594,7 @@ pub mod db {
                     gender: None,
                     operator: Or,
                     count: 100,
-                    last_id: None,
+                    iteration_key: None,
                 }
             ).await.unwrap();
             assert_that(&(page_bday.len())).is_equal_to(4);
@@ -569,7 +607,7 @@ pub mod db {
                     gender: Some(Female),
                     operator: Or,
                     count: 100,
-                    last_id: None,
+                    iteration_key: None,
                 }
             ).await.unwrap();
             assert_that(&(page_gender.len())).is_equal_to(4);
@@ -582,7 +620,7 @@ pub mod db {
                     gender: Some(Female),
                     operator: Or,
                     count: 100,
-                    last_id: None,
+                    iteration_key: None,
                 }
             ).await.unwrap();
             assert_that(&(page_or.len())).is_equal_to(6);

@@ -28,7 +28,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 async fn main() {
     let _tracing_guard = setup_tracing();
     let cache = setup_cache().await;
-    let db = Db::create_connection("fhir", "127.0.0.1", "mypassword", "myuser", 5432);
+    let db = Db::create_connection("fhir", "fhirdb", "mypassword", "myuser", 5432);
     let api = Api::new(Arc::new(db), cache);
 
     let listener = match tokio::net::TcpListener::bind("0.0.0.0:8080").await {
@@ -49,7 +49,7 @@ async fn main() {
 }
 
 async fn setup_cache() -> Cache {
-    let cache = Cache::new("redis://default:mysecretpassword@127.0.0.1:6379").await;
+    let cache = Cache::new("redis://default:mysecretpassword@cache:6379").await;
     return cache;
 }
 

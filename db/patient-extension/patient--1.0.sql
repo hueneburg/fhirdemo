@@ -89,6 +89,7 @@ DECLARE
     v_birthdate_from  TEXT;
     v_birthdate_until TEXT;
     v_operator        fhir.SEARCH_OPERATOR;
+    v_iteration_key TEXT;
     v_last_id         UUID;
     v_count           INTEGER;
     v_gender          fhir.GENDER;
@@ -98,10 +99,11 @@ BEGIN
            search_data ->> 'birthdateFrom',
            search_data ->> 'birthdateUntil',
            CAST((search_data ->> 'gender') AS fhir.GENDER),
+           search_data ->> 'iterationKey',
            (search_data ->> 'lastId')::UUID,
            COALESCE((search_data ->> 'count')::INTEGER, 30),
            COALESCE((search_data ->> 'operator')::fhir.SEARCH_OPERATOR, 'AND'::fhir.SEARCH_OPERATOR)
-    INTO v_name, v_birthdate_from, v_birthdate_until, v_gender, v_last_id, v_count, v_operator;
+    INTO v_name, v_birthdate_from, v_birthdate_until, v_gender, v_iteration_key, v_last_id, v_count, v_operator;
 
     IF v_count > 100 THEN
         v_count = 100;
@@ -109,64 +111,88 @@ BEGIN
 
     IF v_operator = 'OR'::fhir.SEARCH_OPERATOR THEN
         WITH d AS (SELECT JSONB_BUILD_OBJECT('id', p.id, 'birth_date', p.birthdate, 'name',
-                                             JSONB_AGG(pn.patient_name)) data
+                                             JSONB_AGG(pn.patient_name), 'iterationKey',
+                                             p.created_at) data
                    FROM fhir.patient p
                             LEFT JOIN fhir.patient_name pn ON p.id = pn.patient
                    WHERE (((v_birthdate_from IS NOT NULL AND (
                        -- check if year is the same if only year is provided for the patient
-                       ((LENGTH(p.birthdate) = 4 AND (SUBSTRING(v_birthdate_from FOR 4) <= p.birthdate)) OR
+                       (((LENGTH(p.birthdate) = 4 OR LENGTH(v_birthdate_from) = 4)
+                           AND (SUBSTRING(v_birthdate_from FOR 4) <= SUBSTRING(p.birthdate FOR 4))) OR
                            -- check if year-month fits into the timeframe if only those are provided for the patient
-                        (LENGTH(p.birthdate) = 7 AND (SUBSTRING(v_birthdate_from FOR 7) <= p.birthdate)) OR
+                        ((LENGTH(p.birthdate) = 7 OR LENGTH(v_birthdate_from) = 7)
+                            AND (SUBSTRING(v_birthdate_from FOR 7) <= SUBSTRING(p.birthdate FOR 7))) OR
                            -- check complete year-month-date
-                        (LENGTH(p.birthdate) = 10 AND (SUBSTRING(v_birthdate_from FOR 10) <= p.birthdate)))))
+                        ((LENGTH(p.birthdate) = 10 OR LENGTH(v_birthdate_from) = 10)
+                            AND (SUBSTRING(v_birthdate_from FOR 10) <= SUBSTRING(p.birthdate FOR 10))))))
                        AND (v_birthdate_until IS NOT NULL AND (
                            -- check if year is the same if only year is provided for the patient
-                           ((LENGTH(p.birthdate) = 4 AND (SUBSTRING(v_birthdate_until FOR 4) >= p.birthdate)) OR
+                           (((LENGTH(p.birthdate) = 4 OR LENGTH(v_birthdate_until) = 4)
+                               AND (SUBSTRING(v_birthdate_until FOR 4) >= SUBSTRING(p.birthdate FOR 4))) OR
                                -- check if year-month fits into the timeframe if only those are provided for the patient
-                            (LENGTH(p.birthdate) = 7 AND (SUBSTRING(v_birthdate_until FOR 7) >= p.birthdate)) OR
+                            ((LENGTH(p.birthdate) = 7 OR LENGTH(v_birthdate_until) = 7)
+                                AND (SUBSTRING(v_birthdate_until FOR 7) >= SUBSTRING(p.birthdate FOR 7))) OR
                                -- check complete year-month-date
-                            (LENGTH(p.birthdate) = 10 AND (SUBSTRING(v_birthdate_until FOR 10) >= p.birthdate))))))
+                            ((LENGTH(p.birthdate) = 10 OR LENGTH(v_birthdate_until) = 10)
+                                AND (SUBSTRING(v_birthdate_until FOR 10) >= SUBSTRING(p.birthdate FOR 10)))))))
                        OR (v_gender IS NOT NULL AND p.gender = v_gender)
                        OR (v_name IS NOT NULL AND
                            (pn.patient_name IS NOT NULL AND (pn.patient_name LIKE '%' || v_name || '%'))))
+                     -- ignore names that are not in use right now
+                     AND (pn.period_start IS NULL OR pn.period_start <= NOW())
+                     AND (pn.period_end IS NULL OR pn.period_end > NOW())
                      -- pagination
+                     AND (v_iteration_key IS NULL
+                       OR v_iteration_key <= p.created_at)
                      AND (v_last_id IS NULL
                        OR v_last_id < p.id)
-                   GROUP BY p.id
-                   ORDER BY p.id
+                   GROUP BY p.id, p.created_at
+                   ORDER BY p.created_at, p.id
                    LIMIT v_count)
-        SELECT JSONB_AGG(d.data)
+        SELECT COALESCE(JSONB_AGG(d.data), '[]'::JSONB)
         INTO result
         FROM d;
     ELSIF v_operator = 'AND'::fhir.SEARCH_OPERATOR THEN
         WITH d AS (SELECT JSONB_BUILD_OBJECT('id', p.id, 'birthdate', p.birthdate, 'name',
-                                             JSONB_AGG(pn.patient_name)) data
+                                             JSONB_AGG(pn.patient_name), 'iterationKey',
+                                             p.created_at) data
                    FROM fhir.patient p
                             LEFT JOIN fhir.patient_name pn ON p.id = pn.patient
                    WHERE (v_birthdate_from IS NULL OR (
                        -- check if year is the same if only year is provided for the patient
-                       ((LENGTH(p.birthdate) = 4 AND (SUBSTRING(v_birthdate_from FOR 4) <= p.birthdate)) OR
+                       (((LENGTH(p.birthdate) = 4 OR LENGTH(v_birthdate_from) = 4)
+                           AND (SUBSTRING(v_birthdate_from FOR 4) <= SUBSTRING(p.birthdate FOR 4))) OR
                            -- check if year-month fits into the timeframe if only those are provided for the patient
-                        (LENGTH(p.birthdate) = 7 AND (SUBSTRING(v_birthdate_from FOR 7) <= p.birthdate)) OR
+                        ((LENGTH(p.birthdate) = 7 OR LENGTH(v_birthdate_from) = 7)
+                            AND (SUBSTRING(v_birthdate_from FOR 7) <= SUBSTRING(p.birthdate FOR 7))) OR
                            -- check complete year-month-date
-                        (LENGTH(p.birthdate) = 10 AND (SUBSTRING(v_birthdate_from FOR 10) <= p.birthdate)))))
+                        ((LENGTH(p.birthdate) = 10 OR LENGTH(v_birthdate_from) = 10)
+                            AND (SUBSTRING(v_birthdate_from FOR 10) <= SUBSTRING(p.birthdate FOR 10))))))
                      AND (v_birthdate_until IS NULL OR (
                        -- check if year is the same if only year is provided for the patient
-                       ((LENGTH(p.birthdate) = 4 AND (SUBSTRING(v_birthdate_until FOR 4) >= p.birthdate)) OR
+                       (((LENGTH(p.birthdate) = 4 OR LENGTH(v_birthdate_until) = 4))
+                           AND (SUBSTRING(v_birthdate_until FOR 4) >= SUBSTRING(p.birthdate FOR 4))) OR
                            -- check if year-month fits into the timeframe if only those are provided for the patient
-                        (LENGTH(p.birthdate) = 7 AND (SUBSTRING(v_birthdate_until FOR 7) >= p.birthdate)) OR
+                       ((LENGTH(p.birthdate) = 7 OR LENGTH(v_birthdate_until) = 7))
+                           AND (SUBSTRING(v_birthdate_until FOR 7) >= SUBSTRING(p.birthdate FOR 7)) OR
                            -- check complete year-month-date
-                        (LENGTH(p.birthdate) = 10 AND (SUBSTRING(v_birthdate_until FOR 10) >= p.birthdate)))))
+                       ((LENGTH(p.birthdate) = 10 OR LENGTH(v_birthdate_until) = 10)
+                           AND (SUBSTRING(v_birthdate_until FOR 10) >= SUBSTRING(p.birthdate FOR 10)))))
                      AND (v_gender IS NULL OR p.gender = v_gender)
                      AND (v_name IS NULL OR
                           (pn.patient_name IS NOT NULL AND (pn.patient_name LIKE '%' || v_name || '%')))
+                     -- ignore names that are not in use right now
+                     AND (pn.period_start IS NULL OR pn.period_start <= NOW())
+                     AND (pn.period_end IS NULL OR pn.period_end > NOW())
                      -- pagination
+                     AND (v_iteration_key IS NULL
+                       OR v_iteration_key <= p.created_at)
                      AND (v_last_id IS NULL
                        OR v_last_id < p.id)
-                   GROUP BY p.id
-                   ORDER BY p.id
+                   GROUP BY p.id, p.created_at
+                   ORDER BY p.created_at, p.id
                    LIMIT v_count)
-        SELECT JSONB_AGG(d.data)
+        SELECT COALESCE(JSONB_AGG(d.data), '[]'::JSONB)
         INTO result
         FROM d;
     END IF;

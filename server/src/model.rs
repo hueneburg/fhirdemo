@@ -1,22 +1,33 @@
 pub mod model {
+    use crate::model::model::SearchOperator::And;
     use chrono::{DateTime, FixedOffset};
     use serde::{Deserialize, Serialize};
     use std::error::Error;
     use std::fmt::Debug;
     use tokio_postgres::types::{FromSql, Type};
+    use uuid::Uuid;
 
     fn default_count() -> u32 { 30 }
     fn default_vec<T>() -> Vec<T> { Vec::new() }
+    fn deserialize_vec<'de, D, T>(deserializer: D) -> Result<Vec<T>, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+        T: Deserialize<'de>,
+    {
+        let raw: Vec<Option<T>> = Vec::deserialize(deserializer)?;
+        Ok(raw.into_iter().flatten().collect())
+    }
+    fn default_operator() -> SearchOperator { And }
 
     #[derive(Serialize, Deserialize, FromSql, Debug, PartialEq, Eq, Clone)]
     #[serde(rename_all = "camelCase")]
     pub struct PatientStub {
-        #[serde(skip_serializing_if = "Option::is_none")]
-        pub id: Option<String>,
-        #[serde(default = "default_vec")]
+        pub id: String,
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub name: Vec<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
-        pub birth_date: Option<String>,
+        pub birthdate: Option<String>,
+        pub iteration_key: String,
     }
 
     #[derive(Serialize, Deserialize, FromSql, Debug, PartialEq, Eq, Clone)]
@@ -27,25 +38,25 @@ pub mod model {
         pub id: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub meta: Option<Meta>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub implicit_rules: Vec<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub language: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub text: Option<Narrative>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub contained: Vec<Resource>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub extension: Vec<Extension>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub modifier_extension: Vec<Extension>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub identifier: Vec<Identifier>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub active: Option<bool>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub name: Vec<HumanName>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub telecom: Vec<ContactPoint>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub gender: Option<Gender>,
@@ -59,17 +70,17 @@ pub mod model {
         pub marital_status: Option<CodeableConcept>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub multiple_birth: Option<MultipleBirth>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub photo: Vec<Attachment>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub contact: Vec<Contact>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub communication: Vec<Communication>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub general_practitioner: Vec<Reference>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub managing_organization: Option<Reference>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub link: Vec<Link>,
     }
 
@@ -78,15 +89,15 @@ pub mod model {
     pub struct Meta {
         #[serde(skip_serializing_if = "Option::is_none")]
         pub id: Option<String>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub extension: Vec<Extension>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub source: Option<String>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub profile: Vec<String>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub security: Vec<Coding>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub tag: Vec<Coding>,
     }
 
@@ -95,7 +106,7 @@ pub mod model {
     pub struct Narrative {
         #[serde(skip_serializing_if = "Option::is_none")]
         pub id: Option<String>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub extension: Vec<Extension>,
         pub status: NarrativeStatus,
         pub div: String,
@@ -108,7 +119,7 @@ pub mod model {
         pub id: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub meta: Option<Meta>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub implicit_rules: Vec<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub language: Option<String>,
@@ -119,7 +130,7 @@ pub mod model {
     pub struct HumanName {
         #[serde(skip_serializing_if = "Option::is_none")]
         pub id: Option<String>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub extension: Vec<Extension>,
         #[serde(skip_serializing_if = "Option::is_none", rename = "use")]
         pub human_name_use: Option<HumanNameUse>,
@@ -127,11 +138,11 @@ pub mod model {
         pub text: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub family: Option<String>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub given: Vec<String>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub prefix: Vec<String>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub suffix: Vec<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub period: Option<Period>,
@@ -142,7 +153,7 @@ pub mod model {
     pub struct ContactPoint {
         #[serde(skip_serializing_if = "Option::is_none")]
         pub id: Option<String>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub extension: Vec<Extension>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub system: Option<ContactPointSystem>,
@@ -169,7 +180,7 @@ pub mod model {
     pub struct Address {
         #[serde(skip_serializing_if = "Option::is_none")]
         pub id: Option<String>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub extension: Vec<Extension>,
         #[serde(skip_serializing_if = "Option::is_none", rename = "use")]
         pub address_use: Option<AddressUse>,
@@ -177,7 +188,7 @@ pub mod model {
         pub address_type: Option<AddressType>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub text: Option<String>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub line: Vec<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub city: Option<String>,
@@ -206,7 +217,7 @@ pub mod model {
     pub struct Attachment {
         #[serde(skip_serializing_if = "Option::is_none")]
         pub id: Option<String>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub extension: Vec<Extension>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub content_type: Option<String>,
@@ -231,15 +242,15 @@ pub mod model {
     pub struct Contact {
         #[serde(skip_serializing_if = "Option::is_none")]
         pub id: Option<String>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub extension: Vec<Extension>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub modifier_extension: Vec<Extension>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub relationship: Vec<CodeableConcept>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub name: Vec<HumanName>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub telecom: Vec<ContactPoint>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub address: Option<Address>,
@@ -256,9 +267,9 @@ pub mod model {
     pub struct Communication {
         #[serde(skip_serializing_if = "Option::is_none")]
         pub id: Option<String>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub extension: Vec<Extension>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub modifier_extension: Vec<Extension>,
         pub language: String,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -270,7 +281,7 @@ pub mod model {
     pub struct Extension {
         #[serde(skip_serializing_if = "Option::is_none")]
         pub id: Option<String>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub extension: Vec<Extension>,
         pub url: String,
         #[serde(skip_serializing_if = "Option::is_none")]
@@ -290,7 +301,7 @@ pub mod model {
     pub struct Coding {
         #[serde(skip_serializing_if = "Option::is_none")]
         pub id: Option<String>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub extension: Vec<Extension>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub system: Option<String>,
@@ -308,9 +319,9 @@ pub mod model {
     pub struct CodeableConcept {
         #[serde(skip_serializing_if = "Option::is_none")]
         pub id: Option<String>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub extension: Vec<Extension>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub coding: Vec<Coding>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub text: Option<String>,
@@ -320,7 +331,7 @@ pub mod model {
     pub struct Identifier {
         #[serde(skip_serializing_if = "Option::is_none")]
         pub id: Option<String>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub extension: Vec<Extension>,
         #[serde(skip_serializing_if = "Option::is_none", rename = "use")]
         pub identifier_use: Option<IdentifierUse>,
@@ -348,7 +359,7 @@ pub mod model {
     pub struct Reference {
         #[serde(skip_serializing_if = "Option::is_none")]
         pub id: Option<String>,
-        #[serde(default = "default_vec")]
+        #[serde(default = "default_vec", deserialize_with = "deserialize_vec")]
         pub extension: Vec<Extension>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub reference: Option<String>,
@@ -506,9 +517,12 @@ pub mod model {
         pub birthdate_until: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub gender: Option<Gender>,
+        #[serde(default = "default_operator")]
         pub operator: SearchOperator,
         #[serde(default = "default_count")]
         pub count: u32,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        pub iteration_key: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         pub last_id: Option<String>,
     }

@@ -20,6 +20,9 @@ services:
     container_name: server
     ports:
       - "8080:8080"
+    environment:
+      - FHIR_READ_TOKEN=myread
+      - FHIR_WRITE_TOKEN=mywrite
     depends_on:
       - postgres
       - cache

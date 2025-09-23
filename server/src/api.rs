@@ -12,15 +12,17 @@ pub mod api {
     use axum_core::body::Body;
     use axum_core::extract::Request;
     use axum_core::response::Response;
+    use http::Method;
     use std::net::SocketAddr;
     use std::str::FromStr;
     use std::sync::Arc;
-    use tracing::{error, info_span, Instrument};
+    use tower_http::cors::{Any, CorsLayer};
+    use tracing::{error, info, info_span, Instrument};
     use uuid::Uuid;
 
     const UPSERT_PATIENT_PATH: &'static str = "/fhir/patient";
     const SEARCH_PATIENTS_PATH: &'static str = "/fhir/patient";
-    const GET_PATIENT_PATH: &'static str = "/fhir/patient/{patient_id}";
+    pub const GET_PATIENT_PATH: &'static str = "/fhir/patient/{patient_id}";
 
     pub struct Api {
         pub app: Router<()>,
@@ -29,17 +31,22 @@ pub mod api {
     impl Api {
         pub fn new(db: Arc<Db>, cache: Cache) -> Self {
             let auth = Auth::new();
+            let cors = CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods([Method::GET, Method::POST, Method::PUT, Method::OPTIONS])
+                .allow_headers(Any);
+
             let app = Router::new()
-                .route(UPSERT_PATIENT_PATH, put(Api::upsert_patient))
-                .route(SEARCH_PATIENTS_PATH, get(Api::search_patient))
-                .route_layer(from_fn_with_state(cache, Api::get_patient_cache_layer))
-                .route(GET_PATIENT_PATH, get(Api::get_patient))
                 .layer(from_fn(tracing_middleware))
                 .layer(from_fn_with_state(auth, Auth::auth_middleware))
+                .route(SEARCH_PATIENTS_PATH, get(Api::search_patient))
+                .route(GET_PATIENT_PATH, get(Api::get_patient))
+                .route_layer(from_fn_with_state(cache, Api::get_patient_cache_layer))
+                .route(UPSERT_PATIENT_PATH, put(Api::upsert_patient))
+                .layer(cors)
                 .layer(Extension(db));
             Self { app }
         }
-
 
         async fn get_patient_cache_layer(
             State(cache): State<Cache>,
@@ -82,7 +89,15 @@ pub mod api {
             };
             return db.get_patient(uuid)
                      .await
-                     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))
+                     .map_err(|e| {
+                         if e.downcast_ref::<crate::db::db::NotFound>().is_some() {
+                             info!(?e, "Trying to get non-existent ID {}", patient_id);
+                             return (StatusCode::NOT_FOUND, "Unknown UUID".to_string());
+                         }
+                         error!(?e, "Unknown error when querying DB");
+                         return (StatusCode::INTERNAL_SERVER_ERROR,
+                                 "internal error".to_string());
+                     })
                      .map(Json);
         }
     }
@@ -112,6 +127,7 @@ pub mod api {
         };
 
         let span = info_span!("request", %request_id, %method, %uri, %ip);
+        error!("Finishing tracing");
         return next.run(req).instrument(span).await;
     }
 }
