@@ -27,6 +27,7 @@ pub mod model {
         #[serde(skip_serializing_if = "Option::is_none")]
         pub birthdate: Option<String>,
         pub iteration_key: String,
+        pub gender: Option<Gender>,
     }
 
     #[derive(Serialize, Deserialize, FromSql, Debug, PartialEq, Eq, Clone)]

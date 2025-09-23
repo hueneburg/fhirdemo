@@ -110,12 +110,19 @@ BEGIN
     END IF;
 
     IF v_operator = 'OR'::fhir.SEARCH_OPERATOR THEN
-        WITH d AS (SELECT JSONB_BUILD_OBJECT('id', p.id, 'birth_date', p.birthdate, 'name',
+        WITH d AS (SELECT JSONB_BUILD_OBJECT('id', p.id, 'birthdate', p.birthdate, 'name',
                                              JSONB_AGG(pn.patient_name), 'iterationKey',
-                                             p.created_at) data
+                                             p.created_at, 'gender', p.gender::fhir.GENDER) data
                    FROM fhir.patient p
                             LEFT JOIN fhir.patient_name pn ON p.id = pn.patient
-                   WHERE (((v_birthdate_from IS NOT NULL AND (
+                   -- No search parameters at all
+                   WHERE (v_name IS NULL
+                       AND v_birthdate_from IS NULL
+                       AND v_birthdate_until IS NULL
+                       AND v_gender IS NULL
+                       AND (pn.period_start IS NULL OR pn.period_start <= NOW())
+                       AND (pn.period_end IS NULL OR pn.period_end > NOW()))
+                      OR (((v_birthdate_from IS NOT NULL AND (
                        -- check if year is the same if only year is provided for the patient
                        (((LENGTH(p.birthdate) = 4 OR LENGTH(v_birthdate_from) = 4)
                            AND (SUBSTRING(v_birthdate_from FOR 4) <= SUBSTRING(p.birthdate FOR 4))) OR
@@ -137,16 +144,16 @@ BEGIN
                                 AND (SUBSTRING(v_birthdate_until FOR 10) >= SUBSTRING(p.birthdate FOR 10)))))))
                        OR (v_gender IS NOT NULL AND p.gender = v_gender)
                        OR (v_name IS NOT NULL AND
-                           (pn.patient_name IS NOT NULL AND (pn.patient_name LIKE '%' || v_name || '%'))))
-                     -- ignore names that are not in use right now
-                     AND (pn.period_start IS NULL OR pn.period_start <= NOW())
-                     AND (pn.period_end IS NULL OR pn.period_end > NOW())
+                           (pn.patient_name IS NOT NULL AND (pn.patient_name LIKE '%' || COALESCE(v_name, '') || '%'))))
+                       -- ignore names that are not in use right now
+                       AND (pn.period_start IS NULL OR pn.period_start <= NOW())
+                       AND (pn.period_end IS NULL OR pn.period_end > NOW())
                      -- pagination
-                     AND (v_iteration_key IS NULL
-                       OR v_iteration_key < p.created_at
-                       OR (v_iteration_key = p.created_at
-                           AND (v_last_id IS NULL
-                               OR v_last_id < p.id)))
+                       AND (v_iteration_key IS NULL
+                           OR v_iteration_key < p.created_at
+                           OR (v_iteration_key = p.created_at
+                               AND (v_last_id IS NULL
+                                   OR v_last_id < p.id)))
                    GROUP BY p.id, p.created_at
                    ORDER BY p.created_at, p.id
                    LIMIT v_count)
@@ -156,7 +163,7 @@ BEGIN
     ELSIF v_operator = 'AND'::fhir.SEARCH_OPERATOR THEN
         WITH d AS (SELECT JSONB_BUILD_OBJECT('id', p.id, 'birthdate', p.birthdate, 'name',
                                              JSONB_AGG(pn.patient_name), 'iterationKey',
-                                             p.created_at) data
+                                             p.created_at, 'gender', p.gender::fhir.GENDER) data
                    FROM fhir.patient p
                             LEFT JOIN fhir.patient_name pn ON p.id = pn.patient
                    WHERE (v_birthdate_from IS NULL OR (
