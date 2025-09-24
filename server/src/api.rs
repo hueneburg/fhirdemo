@@ -127,7 +127,6 @@ pub mod api {
         };
 
         let span = info_span!("request", %request_id, %method, %uri, %ip);
-        error!("Finishing tracing");
         return next.run(req).instrument(span).await;
     }
 }

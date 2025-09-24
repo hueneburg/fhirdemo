@@ -39,14 +39,14 @@
 <script setup lang="ts">
 import {BButton, BCard, BCol, BFormInput, BFormSelect, BRow} from "bootstrap-vue-next";
 import TextArrayComponent from "@/components/TextArrayComponent.vue";
-import {computed, onMounted, ref, watch} from "vue";
+import {computed, type PropType, ref, watch} from "vue";
 import {HumanNameUse} from "@/models/fhir.ts";
 
 const props = defineProps({
-  nameUse: {type: HumanNameUse, default: null},
-  givenName: {type: Array<string>, default: []},
-  prefix: {type: Array<string>, default: []},
-  suffix: {type: Array<string>, default: []},
+  nameUse: {type: String as PropType<HumanNameUse>, default: null},
+  givenName: {type: Array<string>, default: () => []},
+  prefix: {type: Array<string>, default: () => []},
+  suffix: {type: Array<string>, default: () => []},
   familyName: {type: String, default: ''},
   periodStart: {type: String, default: null},
   periodEnd: {type: String, default: null}

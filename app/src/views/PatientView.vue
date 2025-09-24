@@ -79,21 +79,22 @@ const genderOptions = [
 onMounted(async function () {
   const param = route.params.id;
   const id = Array.isArray(param) ? param[0] : param
-  if (id) {
+  if (id && id !== 'undefined') {
     const p = await client.getPatient(id);
     patientId.value = id;
     patient.value = p;
     names.value = p.name || [];
     namePeriods.value = names.value.map(n => n.period || {}) || [];
-    dob.value = p.birthDate;
+    dob.value = p.birthDate || null;
+    gender.value = p.gender || null;
   } else {
     patientId.value = null;
   }
 });
 
 async function addName() {
-  namePeriods.value.push({} as HumanName)
-  names.value.push({} as Period);
+  namePeriods.value.push({} as Period)
+  names.value.push({} as HumanName);
 }
 
 async function deleteName(index: number) {
@@ -104,7 +105,7 @@ async function deleteName(index: number) {
 async function save() {
   const errors = new Set();
   const dateRegex = /^([0-9]([0-9]([0-9][1-9]|[1-9]0)|[1-9]00)|[1-9]000)(-(0[1-9]|1[0-2])(-(0[1-9]|[1-2][0-9]|3[0-1]))?)?$/;
-  if (!dateRegex.test(dob.value)) {
+  if (!dateRegex.test(dob.value || '')) {
     errors.add('Date of birth needs to be a valid Fhir date.');
   }
   let ns = [];
@@ -122,20 +123,31 @@ async function save() {
     n.period = period;
     ns.push(n);
   }
-  if (errors.length > 0) {
+  if (errors.size > 0) {
     create({
       title: 'Error',
-      body: errors.join('<br>'),
+      body: [...errors].join('<br>'),
       variant: 'danger',
-      pos: 'baseline-center',
+      pos: 'middle-center',
       modelValue: 10000,
     });
     return;
   }
   const p: Patient = {
     name: ns,
-    birthDate: dob.value,
-    gender: gender.value
+    birthDate: dob.value || undefined,
+    gender: gender.value || undefined,
+    implicitRules: [],
+    contained: [],
+    extension: [],
+    modifierExtension: [],
+    identifier: [],
+    telecom: [],
+    photo: [],
+    contact: [],
+    communication: [],
+    generalPractitioner: [],
+    link: [],
   };
   try {
     if (patientId.value) {

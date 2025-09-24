@@ -31,7 +31,7 @@ import {BButton, BCard, BCol, BFormInput, BRow} from "bootstrap-vue-next";
 const data = ref<string[]>([]);
 const title = ref<string>('');
 
-const props = defineProps({data: {type: Array<string>, default: []}, title: {type: String, default: ''}});
+const props = defineProps({data: {type: Array<string>, default: () => []}, title: {type: String, default: ''}});
 const emit = defineEmits(['update:data']);
 watch(data, (val) => {
   emit('update:data', [...val])
@@ -40,7 +40,6 @@ watch(data, (val) => {
 onMounted(async function () {
   data.value = [...props.data];
   title.value = props.title;
-  console.log(`${props.title} - ${props.data}`);
 });
 
 function deleteItem(index: number) {

@@ -37,7 +37,6 @@ pub mod cache {
         ) -> Response<Body> {
             if req.method() != http::Method::GET
                 || req.extensions().get::<MatchedPath>().unwrap().as_str() != GET_PATIENT_PATH {
-                error!("Next because not get & get patient");
                 return next.run(req).await;
             }
 

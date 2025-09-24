@@ -109,21 +109,16 @@ pub mod db {
                                     params: PatientSearch,
         ) -> Result<Json<Vec<PatientStub>>, Box<dyn Error>> {
             let client = self.pool.get().await?;
-            error!(?params, "Search query");
             let row = client.query_one(
                 "SELECT fhir.search_patients($1);",
                 &[&serde_json::to_value(params)?]).await?;
-            error!(?row, "DB Response");
             let r = row.get(0);
-            error!(?r, "Got a response");
             let patients = match r {
                 Value::String(s) => serde_json::from_str::<Vec<PatientStub>>(s.as_str())?,
                 Value::Array(_) => serde_json::from_value::<Vec<PatientStub>>(r).unwrap(),
                 v => return Err(format!("Unknown JSON type: {}", v).into())
             };
-            error!(?patients, "Got patients");
             let json = Json(patients);
-            error!(?json, "Parsed json");
             return Ok(json);
         }
     }
@@ -634,6 +629,79 @@ pub mod db {
                 }
             ).await.unwrap();
             assert_that(&(page_or.len())).is_equal_to(6);
+        }
+
+        #[tokio::test]
+        async fn test_empty_search() {
+            let mut patients = [
+                get_empty_patient(),
+                get_empty_patient(),
+                get_empty_patient(),
+                get_empty_patient(),
+                get_empty_patient()
+            ];
+
+            let test_db = setup().await;
+            let db = test_db.db;
+
+            for p in &mut patients {
+                db.upsert_patient(p).await.unwrap();
+            }
+
+            let and_res = db.search_patient(PatientSearch {
+                iteration_key: None,
+                last_id: None,
+                name: None,
+                count: 30,
+                gender: None,
+                operator: And,
+                birthdate_until: None,
+                birthdate_from: None,
+            }).await.unwrap();
+
+            assert_that!(and_res.len()).is_equal_to(patients.len());
+
+            let or_res = db.search_patient(PatientSearch {
+                iteration_key: None,
+                last_id: None,
+                name: None,
+                count: 30,
+                gender: None,
+                operator: Or,
+                birthdate_until: None,
+                birthdate_from: None,
+            }).await.unwrap();
+
+            assert_that!(or_res.len()).is_equal_to(patients.len());
+        }
+
+        #[tokio::test]
+        async fn test_search_returns_stub() {
+            let test_db = setup().await;
+            let db = test_db.db;
+
+            let mut patient = get_full_patient(&db).await;
+            let pid = db.upsert_patient(&mut patient).await.unwrap();
+
+            let Json(res) = db.search_patient(PatientSearch {
+                iteration_key: None,
+                last_id: None,
+                name: None,
+                count: 30,
+                gender: None,
+                operator: Or,
+                birthdate_until: None,
+                birthdate_from: None,
+            }).await.unwrap();
+
+            assert_that!(res.len()).is_equal_to(1);
+
+            let p = &res[0];
+            assert_that!(p.gender).is_equal_to(patient.gender);
+            assert_that!(p.id).is_equal_to(pid.to_string());
+            assert_that!(p.name.first().unwrap())
+                .is_equal_to(&patient.name[1].text.clone().unwrap());
+            assert_that!(p.birthdate).is_equal_to(patient.birth_date);
         }
 
         #[tokio::test]

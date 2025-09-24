@@ -20,7 +20,7 @@ export default {
         })).data;
     },
 
-    async getPatient(id: string): Promise<Patient> {
+    async getPatient(id: string | null): Promise<Patient> {
         return (await client.get(`/patient/${id}`)).data;
     },
 
