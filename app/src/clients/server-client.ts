@@ -1,6 +1,5 @@
 import axios from "axios";
-import type {SearchOperator} from "@/models/search-operator.ts";
-import type {Gender, Patient, PatientStub, SearchParams} from "@/models/fhir.ts";
+import type {Patient, PatientStub, SearchParams} from "@/models/fhir.ts";
 
 const client = axios.create({
     baseURL: 'http://127.0.0.1:8080/fhir/',
@@ -22,7 +21,10 @@ export default {
     },
 
     async getPatient(id: string): Promise<Patient> {
-        console.log("Sending request");
         return (await client.get(`/patient/${id}`)).data;
+    },
+
+    async upsertPatient(patient: Patient): Promise<string> {
+        return (await client.put(`/patient`, patient)).data;
     }
 }

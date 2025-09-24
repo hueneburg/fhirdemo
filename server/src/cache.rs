@@ -92,7 +92,7 @@ pub mod cache {
                         let _ = client.set_ex::<>(
                             &id.to_string(),
                             &body_bytes.to_vec(),
-                            300,
+                            45,
                         ).await;
 
                         Response::from_parts(parts, Body::from(body_bytes))

@@ -73,10 +73,23 @@
 <script setup lang="ts">
 import {onMounted, ref} from "vue";
 import client from '../clients/server-client.js'
-import {BButton, BCard, BCol, BFormInput, BFormSelect, BNavbar, BNavbarNav, BNavItem, BRow} from "bootstrap-vue-next";
+import {
+  BButton,
+  BCard,
+  BCol,
+  BFormInput,
+  BFormSelect,
+  BNavbar,
+  BNavbarNav,
+  BNavItem,
+  BRow,
+  useToast
+} from "bootstrap-vue-next";
 import {Gender, type PatientStub, type SearchParams} from "@/models/fhir.ts";
 import router from "@/router";
 import {SearchOperator} from "@/models/search-operator.ts";
+
+const {create} = useToast()
 
 const patients = ref<PatientStub[]>([]);
 const pages = ref<PatientStub[][]>([]);
@@ -149,11 +162,17 @@ async function nextPage() {
     currentPage.value = currentPage.value + 1;
     patients.value = page;
     pages.value.push(page);
+  } else {
+    create({
+      body: 'You have reached the last page.',
+      variant: 'info',
+      pos: 'top-end',
+      modelValue: 10000,
+    });
   }
 }
 
 async function previousPage() {
-  console.log(`current page: ${currentPage.value}`);
   if (currentPage.value <= 1) {
     return;
   }

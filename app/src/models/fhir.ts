@@ -22,27 +22,27 @@ export interface SearchParams {
 export interface Patient {
     id?: string;
     meta?: Meta;
-    implicit_rules: string[];
+    implicitRules: string[];
     language?: string;
     text?: Narrative;
     contained: Resource[];
     extension: Extension[];
-    modifier_extension: Extension[];
+    modifierExtension: Extension[];
     identifier: Identifier[];
     active?: boolean;
     name: HumanName[];
     telecom: ContactPoint[];
     gender?: Gender;
-    birth_date?: string;
+    birthDate?: string;
     deceased?: Deceased;
     address?: Address;
-    marital_status?: CodeableConcept;
-    multiple_birth?: MultipleBirth;
+    maritalStatus?: CodeableConcept;
+    multipleBirth?: MultipleBirth;
     photo: Attachment[];
     contact: Contact[];
     communication: Communication[];
-    general_practitioner: Reference[];
-    managing_organization?: Reference;
+    generalPractitioner: Reference[];
+    managingOrganization?: Reference;
     link: Link[];
 }
 
@@ -72,7 +72,7 @@ export interface Resource {
 export interface HumanName {
     id?: string;
     extension: Extension[];
-    human_name_use?: HumanNameUse;
+    use?: HumanNameUse;
     text?: string;
     family?: string;
     given: string[];
@@ -86,40 +86,40 @@ export interface ContactPoint {
     extension: Extension[];
     system?: ContactPointSystem;
     value?: string;
-    contact_point_use?: ContactPointUse;
+    use?: ContactPointUse;
     rank?: number;
     period?: Period;
 }
 
 export interface Deceased {
     deceased?: boolean;
-    date_time?: string;
+    dateTime?: string;
 }
 
 export interface Address {
     id?: string;
     extension: Extension[];
-    address_use?: AddressUse;
-    address_type?: AddressType;
+    use?: AddressUse;
+    type?: AddressType;
     text?: string;
     line: string[];
     city?: string;
     district?: string;
     state?: string;
-    postal_code?: string;
+    postalCode?: string;
     country?: string;
     period?: Period;
 }
 
 export interface MultipleBirth {
-    multiple_birth?: boolean;
+    multipleBirth?: boolean;
     count?: number;
 }
 
 export interface Attachment {
     id?: string;
     extension: Extension[];
-    content_type?: string;
+    contentType?: string;
     language?: string;
     data?: string;
     url?: string;
@@ -132,7 +132,7 @@ export interface Attachment {
 export interface Contact {
     id?: string;
     extension: Extension[];
-    modifier_extension: Extension[];
+    modifierExtension: Extension[];
     relationship: CodeableConcept[];
     name: HumanName[];
     telecom: ContactPoint[];
@@ -145,7 +145,7 @@ export interface Contact {
 export interface Communication {
     id?: string;
     extension: Extension[];
-    modifier_extension: Extension[];
+    modifierExtension: Extension[];
     language: string;
     preferred?: boolean;
 }
@@ -154,10 +154,10 @@ export interface Extension {
     id?: string;
     extension: Extension[];
     url: string;
-    value_base_64_binary?: string;
-    value_boolean?: boolean;
-    value_string?: string;
-    value_integer?: number;
+    valueBase64Binary?: string;
+    valueBoolean?: boolean;
+    valueString?: string;
+    valueInteger?: number;
 }
 
 export interface Coding {
@@ -167,7 +167,7 @@ export interface Coding {
     version?: string;
     code?: string;
     display?: string;
-    user_selected?: boolean;
+    userSelected?: boolean;
 }
 
 export interface CodeableConcept {
@@ -180,8 +180,8 @@ export interface CodeableConcept {
 export interface Identifier {
     id?: string;
     extension: Extension[];
-    identifier_use?: IdentifierUse;
-    identifier_type?: CodeableConcept;
+    identifierUseuse?: IdentifierUse;
+    identifierType?: CodeableConcept;
     system?: string;
     value?: string;
     period?: Period;
@@ -197,14 +197,14 @@ export interface Reference {
     id?: string;
     extension: Extension[];
     reference?: string;
-    ref_type?: string;
+    refType?: string;
     identifier?: Identifier;
     display?: string;
 }
 
 export interface Link {
     other: Reference;
-    link_type: LinkType;
+    linkType: LinkType;
 }
 
 export enum IdentifierUse {
