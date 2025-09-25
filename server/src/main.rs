@@ -28,7 +28,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 async fn main() {
     let _tracing_guard = setup_tracing();
     let cache = setup_cache().await;
-    let db = Db::create_connection("fhir", "arhue.xyz", "mypassword", "myuser", 5432);
+    let db = Db::create_connection("fhir", "localhost", "mypassword", "myuser", 5432);
     let api = Api::new(Arc::new(db), cache);
 
     let listener = match tokio::net::TcpListener::bind("0.0.0.0:8080").await {

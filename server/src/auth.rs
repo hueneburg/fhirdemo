@@ -6,7 +6,6 @@ pub mod auth {
     use axum_core::response::Response;
     use http::{HeaderValue, StatusCode};
     use std::env;
-    use tracing::error;
 
     #[derive(Clone)]
     pub struct Auth {
